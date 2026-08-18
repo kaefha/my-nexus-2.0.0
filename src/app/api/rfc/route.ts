@@ -17,12 +17,14 @@ export async function GET(request: Request) {
       SELECT r.*, 
              p.project_name, p.customer,
              u.name as requestor_name, u.role as requestor_role,
-             a.name as approver_name, a.role as approver_role,
+             COALESCE(f_app.name, s_app.name) as approver_name,
+             COALESCE(f_app.role, s_app.role) as approver_role,
              (SELECT COUNT(*) FROM rfc_items i WHERE i.rfc_id = r.id) as items_count
       FROM rfcs r
       LEFT JOIN projects p ON r.project_id = p.id
       LEFT JOIN users u ON r.requestor_id = u.id
-      LEFT JOIN users a ON r.approver_id = a.id
+      LEFT JOIN users s_app ON r.site_approver_id = s_app.id
+      LEFT JOIN users f_app ON r.finance_approver_id = f_app.id
       WHERE 1=1
     `;
     const queryParams: any[] = [];
@@ -115,7 +117,7 @@ export async function POST(request: Request) {
     const rfcNumber = `RFC-${dateStr}-${randomSuffix}`;
 
     await client.query(`
-      INSERT INTO rfcs (id, rfc_number, project_id, requestor_id, location, status, notes, request_document, request_date, approver_id)
+      INSERT INTO rfcs (id, rfc_number, project_id, requestor_id, location, status, notes, request_document, request_date, site_approver_id)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     `, [id, rfcNumber, projectId, requestorId, location, status, notes || '', requestDocument || null, requestDate ? new Date(requestDate) : new Date(), approvalDestination]);
 

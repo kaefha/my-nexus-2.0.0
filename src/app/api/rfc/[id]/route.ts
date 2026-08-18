@@ -21,14 +21,11 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         p.project_name as "projectName",
         u1.name as "requestorName",
         u1.role as "requestorRole",
-        u2.name as "approverName",
-        u2.role as "approverRole",
         s_app.name as "siteApproverName",
         f_app.name as "financeApproverName"
       FROM rfcs r
       LEFT JOIN projects p ON r.project_id = p.id
       LEFT JOIN users u1 ON r.requestor_id = u1.id
-      LEFT JOIN users u2 ON r.approver_id = u2.id
       LEFT JOIN users s_app ON r.site_approver_id = s_app.id
       LEFT JOIN users f_app ON r.finance_approver_id = f_app.id
       WHERE r.id = $1

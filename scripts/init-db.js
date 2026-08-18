@@ -21,6 +21,7 @@ const initDb = async () => {
         email VARCHAR(255) UNIQUE NOT NULL,
         role VARCHAR(50) DEFAULT 'USER',
         is_active BOOLEAN DEFAULT TRUE,
+        password VARCHAR(255) DEFAULT '123',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
