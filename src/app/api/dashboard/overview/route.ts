@@ -10,11 +10,17 @@ export async function GET() {
     const projectsRes = await client.query(`SELECT COUNT(*) FROM projects WHERE status = 'ACTIVE'`);
     const rfcRes = await client.query(`SELECT COUNT(*) FROM rfcs WHERE status IN ('WAITING_SITE_APPROVAL', 'WAITING_FINANCE_APPROVAL', 'SUBMITTED')`);
     
-    // We can query other tables as well
     const poRes = await client.query(`SELECT COUNT(*) FROM purchase_orders WHERE status = 'ACTIVE'`);
     const doRes = await client.query(`SELECT COUNT(*) FROM delivery_orders WHERE status = 'SHIPPED'`);
     const transferRes = await client.query(`SELECT COUNT(*) FROM transfers WHERE status = 'PENDING'`);
     const warehouseRes = await client.query(`SELECT COUNT(*) FROM warehouses WHERE status = 'ACTIVE'`);
+    
+    // Asset Value Calculation (Total Stock Qty * Unit Price)
+    const assetValRes = await client.query(`
+      SELECT COALESCE(SUM(s.quantity * COALESCE(m.unit_price, 0)), 0) as total_asset_value
+      FROM inventory_stocks s
+      JOIN material_masters m ON s.material_id = m.id
+    `);
 
     return NextResponse.json({
       totalMaterials: parseInt(materialsRes.rows[0].count, 10),
@@ -24,6 +30,7 @@ export async function GET() {
       onDelivery: parseInt(doRes.rows[0].count, 10),
       pendingTransfers: parseInt(transferRes.rows[0].count, 10),
       totalWarehouses: parseInt(warehouseRes.rows[0].count, 10),
+      totalAssetValue: parseFloat(assetValRes.rows[0].total_asset_value) || 0,
     });
   } catch (error) {
     console.error('Error fetching dashboard overview:', error);

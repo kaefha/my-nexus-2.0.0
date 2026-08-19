@@ -76,21 +76,41 @@ export async function PUT(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const singleId = searchParams.get('id');
+    const paramIds = searchParams.get('ids');
+    
+    let ids: string[] = [];
 
-    if (!id) {
-      return NextResponse.json({ message: 'Missing user ID' }, { status: 400 });
+    if (singleId) {
+      ids.push(singleId);
+    } else if (paramIds) {
+      ids = paramIds.split(',').filter(Boolean);
+    } else {
+      try {
+        const body = await request.json();
+        if (body.ids && Array.isArray(body.ids)) {
+          ids = body.ids;
+        } else if (body.id) {
+          ids = [body.id];
+        }
+      } catch (e) {
+        // No body
+      }
     }
 
-    const res = await pool.query(`DELETE FROM users WHERE id = $1 RETURNING id`, [id]);
+    if (ids.length === 0) {
+      return NextResponse.json({ message: 'Missing user ID(s)' }, { status: 400 });
+    }
+
+    const res = await pool.query(`DELETE FROM users WHERE id = ANY($1::uuid[]) RETURNING id`, [ids]);
 
     if (res.rowCount === 0) {
-      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+      return NextResponse.json({ message: 'No users found to delete' }, { status: 404 });
     }
 
-    return NextResponse.json({ message: 'User deleted successfully' }, { status: 200 });
+    return NextResponse.json({ message: `Successfully deleted ${res.rowCount} user(s)`, count: res.rowCount }, { status: 200 });
   } catch (error: any) {
-    console.error('Error deleting user:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    console.error('Error deleting user(s):', error);
+    return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
   }
 }

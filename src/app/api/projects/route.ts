@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const conditions: string[] = [];
 
     if (search) {
-      conditions.push(`(LOWER(project_name) LIKE $${queryParams.length + 1} OR LOWER(customer) LIKE $${queryParams.length + 1} OR LOWER(region) LIKE $${queryParams.length + 1})`);
+      conditions.push(`(LOWER(project_name) LIKE $${queryParams.length + 1} OR LOWER(project_code) LIKE $${queryParams.length + 1} OR LOWER(customer) LIKE $${queryParams.length + 1} OR LOWER(region) LIKE $${queryParams.length + 1})`);
       queryParams.push(`%${search}%`);
     }
 
@@ -49,6 +49,7 @@ export async function GET(request: Request) {
     
     const projects = res.rows.map((row: any) => ({
       id: row.id,
+      projectCode: row.project_code || '',
       projectName: row.project_name,
       customer: row.customer,
       region: row.region,
@@ -72,7 +73,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { projectName, customer, region, startDate, pic, whatsappNumber, projectType, status } = body;
+    const { projectCode, projectName, customer, region, startDate, pic, whatsappNumber, projectType, status } = body;
 
     if (!projectName) {
       return NextResponse.json({ message: 'Project name is required' }, { status: 400 });
@@ -80,20 +81,30 @@ export async function POST(request: Request) {
 
     const id = generateId();
 
+    // Auto-generate project_code if not provided
+    let code = (projectCode || '').trim();
+    if (!code) {
+      const year = new Date().getFullYear();
+      const countRes = await pool.query('SELECT COUNT(*) FROM projects');
+      const seq = String(parseInt(countRes.rows[0].count, 10) + 1).padStart(3, '0');
+      code = `PRJ-${year}-${seq}`;
+    }
+
     const res = await pool.query(`
-      INSERT INTO projects (id, project_name, customer, region, start_date, pic, whatsapp_number, project_type, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO projects (id, project_code, project_name, customer, region, start_date, pic, whatsapp_number, project_type, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
-    `, [id, projectName, customer, region, startDate || null, pic, whatsappNumber || null, projectType || null, status || 'PLANNING']);
+    `, [id, code, projectName, customer, region, startDate || null, pic, whatsappNumber || null, projectType || null, status || 'PLANNING']);
 
     await pool.query(`
       INSERT INTO project_activities (id, project_id, action, details)
       VALUES ($1, $2, $3, $4)
-    `, [generateId(), id, 'CREATED', 'Project initialized in PLANNING stage']);
+    `, [generateId(), id, 'CREATED', `Project initialized with Code ${code} in PLANNING stage`]);
 
     const row = res.rows[0];
     const project = {
       id: row.id,
+      projectCode: row.project_code || code,
       projectName: row.project_name,
       customer: row.customer,
       region: row.region,
@@ -117,7 +128,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, projectName, customer, region, startDate, pic, whatsappNumber, projectType, status } = body;
+    const { id, projectCode, projectName, customer, region, startDate, pic, whatsappNumber, projectType, status } = body;
 
     if (!id || !projectName) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
@@ -137,11 +148,11 @@ export async function PUT(request: Request) {
 
       const res = await client.query(`
         UPDATE projects 
-        SET project_name = $1, customer = $2, region = $3, start_date = $4, 
-            pic = $5, whatsapp_number = $6, project_type = $7, status = $8, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $9
+        SET project_code = $1, project_name = $2, customer = $3, region = $4, start_date = $5, 
+            pic = $6, whatsapp_number = $7, project_type = $8, status = $9, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $10
         RETURNING *
-      `, [projectName, customer, region, startDate || null, pic, whatsappNumber || null, projectType || null, newStatus, id]);
+      `, [projectCode || null, projectName, customer, region, startDate || null, pic, whatsappNumber || null, projectType || null, newStatus, id]);
 
       updatedRow = res.rows[0];
 
@@ -168,7 +179,13 @@ export async function PUT(request: Request) {
       client.release();
     }
 
-    return NextResponse.json({ data: updatedRow, message: 'Project updated' }, { status: 200 });
+    return NextResponse.json({ 
+      data: {
+        ...updatedRow,
+        projectCode: updatedRow.project_code || ''
+      }, 
+      message: 'Project updated' 
+    }, { status: 200 });
   } catch (error: any) {
     console.error('Error updating project:', error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });

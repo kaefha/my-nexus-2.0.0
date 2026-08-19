@@ -177,7 +177,12 @@ export default function CreateRfcPage() {
                     >
                       <span className="text-left flex-1 pr-2 break-words whitespace-normal">
                       {formData.projectId
-                        ? projects.find((p) => p.id === formData.projectId)?.projectName
+                        ? (() => {
+                            const selectedProj = projects.find((p) => p.id === formData.projectId);
+                            return selectedProj 
+                              ? `${selectedProj.projectCode ? `[${selectedProj.projectCode}] ` : ''}${selectedProj.projectName}` 
+                              : "Select a project...";
+                          })()
                         : "Select a project..."}
                       </span>
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -186,20 +191,20 @@ export default function CreateRfcPage() {
                     <div className="flex items-center border-b px-3">
                       <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
                       <Input
-                        placeholder="Search project..."
+                        placeholder="Search project ID or name..."
                         className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-0"
                         value={projectSearch}
                         onChange={(e) => setProjectSearch(e.target.value)}
                       />
                     </div>
                     <div className="max-h-[300px] overflow-y-auto p-1">
-                      {projects.filter(p => p.projectName.toLowerCase().includes(projectSearch.toLowerCase())).length === 0 ? (
+                      {projects.filter(p => `${p.projectCode || ''} ${p.projectName} ${p.customer || ''}`.toLowerCase().includes(projectSearch.toLowerCase())).length === 0 ? (
                         <div className="py-6 text-center text-sm text-muted-foreground">No project found.</div>
                       ) : (
-                        projects.filter(p => p.projectName.toLowerCase().includes(projectSearch.toLowerCase())).map(p => (
+                        projects.filter(p => `${p.projectCode || ''} ${p.projectName} ${p.customer || ''}`.toLowerCase().includes(projectSearch.toLowerCase())).map(p => (
                           <div
                             key={p.id}
-                            className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground ${formData.projectId === p.id ? 'bg-accent text-accent-foreground' : ''}`}
+                            className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground ${formData.projectId === p.id ? 'bg-accent text-accent-foreground' : ''}`}
                             onClick={() => {
                               setFormData({...formData, projectId: p.id});
                               setProjectPopoverOpen(false);
@@ -210,7 +215,13 @@ export default function CreateRfcPage() {
                                 <Check className="h-4 w-4" />
                               </span>
                             )}
-                            {p.projectName}
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-primary text-xs font-mono">{p.projectCode || '-'}</span>
+                                <span className="font-medium text-sm">{p.projectName}</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">{p.customer} • {p.region}</span>
+                            </div>
                           </div>
                         ))
                       )}

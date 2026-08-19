@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     // Complex query to join with projects and count items
     let queryStr = `
       SELECT r.*, 
-             p.project_name, p.customer,
+             p.project_code, p.project_name, p.customer,
              u.name as requestor_name, u.role as requestor_role,
              COALESCE(f_app.name, s_app.name) as approver_name,
              COALESCE(f_app.role, s_app.role) as approver_role,
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 
     if (search) {
       queryParams.push(`%${search}%`);
-      queryStr += ` AND (LOWER(r.rfc_number) LIKE $${queryParams.length} OR LOWER(p.project_name) LIKE $${queryParams.length} OR LOWER(r.location) LIKE $${queryParams.length})`;
+      queryStr += ` AND (LOWER(r.rfc_number) LIKE $${queryParams.length} OR LOWER(p.project_code) LIKE $${queryParams.length} OR LOWER(p.project_name) LIKE $${queryParams.length} OR LOWER(r.location) LIKE $${queryParams.length})`;
     }
 
     if (status && status !== 'ALL') {
@@ -72,6 +72,7 @@ export async function GET(request: Request) {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       project: {
+        projectCode: row.project_code || '',
         projectName: row.project_name,
         customer: row.customer
       },

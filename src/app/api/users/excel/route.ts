@@ -2,6 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { pool, generateId } from '@/lib/db';
 import * as xlsx from 'xlsx';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
+function getValueByPossibleKeys(item: Record<string, any>, possibleKeys: string[]): any {
+  for (const key of possibleKeys) {
+    if (item[key] !== undefined && item[key] !== null && item[key] !== '') {
+      return item[key];
+    }
+  }
+  const itemKeys = Object.keys(item);
+  for (const pKey of possibleKeys) {
+    const matchedKey = itemKeys.find(k => k.trim().toLowerCase() === pKey.trim().toLowerCase());
+    if (matchedKey && item[matchedKey] !== undefined && item[matchedKey] !== null && item[matchedKey] !== '') {
+      return item[matchedKey];
+    }
+  }
+  return undefined;
+}
+
+interface ParsedUserItem {
+  rowIndex: number;
+  email: string;
+  name: string;
+  role: string;
+  isActive: boolean;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -14,39 +41,134 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
     const workbook = xlsx.read(buffer, { type: 'buffer' });
     
-    if (workbook.SheetNames.length === 0) {
+    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
       return NextResponse.json({ message: 'Empty excel file' }, { status: 400 });
     }
 
     const worksheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[worksheetName];
-    const data = xlsx.utils.sheet_to_json(worksheet);
+    const data = xlsx.utils.sheet_to_json<Record<string, any>>(worksheet);
 
-    let count = 0;
-    
-    for (const item of data as any[]) {
-      const email = item['Email'];
-      const name = item['Name'];
-      const role = item['Role'] || 'USER';
-      const isActive = item['Status'] === 'Inactive' ? false : true;
+    if (!data || data.length === 0) {
+      return NextResponse.json({ message: 'No data rows found in the Excel sheet' }, { status: 400 });
+    }
 
-      if (!email || !name) continue;
+    let createdCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+    const validItems: ParsedUserItem[] = [];
 
-      const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-      if (existing.rowCount === 0) {
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+      const rowIndex = i + 2;
+
+      const rawEmail = getValueByPossibleKeys(item, ['Email', 'Alamat Email', 'email']);
+      const rawName = getValueByPossibleKeys(item, ['Name', 'Nama', 'Nama Lengkap', 'name']);
+      const rawRole = getValueByPossibleKeys(item, ['Role', 'Peran', 'Jabatan', 'role']);
+      const rawStatus = getValueByPossibleKeys(item, ['Status', 'status']);
+
+      if (!rawEmail || !rawName) {
+        skippedCount++;
+        errors.push(`Baris ${rowIndex}: Email atau Nama user kosong`);
+        continue;
+      }
+
+      const isActive = rawStatus === 'Inactive' || rawStatus === 'Tidak Aktif' ? false : true;
+
+      validItems.push({
+        rowIndex,
+        email: String(rawEmail).trim().toLowerCase(),
+        name: String(rawName).trim(),
+        role: rawRole ? String(rawRole).trim().toUpperCase() : 'USER',
+        isActive
+      });
+    }
+
+    // Chunked Batch Upsert (200 per batch)
+    const BATCH_SIZE = 200;
+    for (let b = 0; b < validItems.length; b += BATCH_SIZE) {
+      const chunk = validItems.slice(b, b + BATCH_SIZE);
+
+      const valueClauses: string[] = [];
+      const params: any[] = [];
+      let paramIdx = 1;
+
+      for (const item of chunk) {
         const id = generateId();
-        await pool.query(`
-          INSERT INTO users (id, email, name, role, is_active)
-          VALUES ($1, $2, $3, $4, $5)
-        `, [id, email, name, role, isActive]);
-        count++;
+        valueClauses.push(
+          `($${paramIdx}, $${paramIdx + 1}, $${paramIdx + 2}, $${paramIdx + 3}, $${paramIdx + 4}, '123')`
+        );
+        params.push(id, item.email, item.name, item.role, item.isActive);
+        paramIdx += 5;
+      }
+
+      const bulkQuery = `
+        INSERT INTO users (id, email, name, role, is_active, password)
+        VALUES ${valueClauses.join(', ')}
+        ON CONFLICT (email) 
+        DO UPDATE SET
+          name = EXCLUDED.name,
+          role = EXCLUDED.role,
+          is_active = EXCLUDED.is_active,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING (xmax = 0) AS is_inserted;
+      `;
+
+      try {
+        const res = await pool.query(bulkQuery, params);
+        res.rows.forEach((row: any) => {
+          if (row.is_inserted) {
+            createdCount++;
+          } else {
+            updatedCount++;
+          }
+        });
+      } catch (err: any) {
+        console.warn(`User batch query failed for chunk at offset ${b}, falling back to row-by-row:`, err.message);
+        for (const item of chunk) {
+          try {
+            const id = generateId();
+            const res = await pool.query(`
+              INSERT INTO users (id, email, name, role, is_active, password)
+              VALUES ($1, $2, $3, $4, $5, '123')
+              ON CONFLICT (email) 
+              DO UPDATE SET
+                name = EXCLUDED.name,
+                role = EXCLUDED.role,
+                is_active = EXCLUDED.is_active,
+                updated_at = CURRENT_TIMESTAMP
+              RETURNING (xmax = 0) AS is_inserted;
+            `, [id, item.email, item.name, item.role, item.isActive]);
+
+            if (res.rows[0]?.is_inserted) {
+              createdCount++;
+            } else {
+              updatedCount++;
+            }
+          } catch (rowErr: any) {
+            errors.push(`Baris ${item.rowIndex} (${item.email}): ${rowErr.message || 'Gagal diproses'}`);
+          }
+        }
       }
     }
 
-    return NextResponse.json({ message: 'Success', count }, { status: 200 });
+    const totalProcessed = createdCount + updatedCount;
+
+    return NextResponse.json({
+      message: 'Success',
+      count: totalProcessed,
+      createdCount,
+      updatedCount,
+      skippedCount,
+      errors: errors.length > 0 ? errors : undefined
+    }, { status: 200 });
+
   } catch (error: any) {
     console.error('Excel import error:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      message: error?.message ? `Import gagal: ${error.message}` : 'Format file Excel tidak valid atau gagal dibaca' 
+    }, { status: 500 });
   }
 }
 
@@ -89,8 +211,8 @@ export async function GET(req: NextRequest) {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Excel export error:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
   }
 }

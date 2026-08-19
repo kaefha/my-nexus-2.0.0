@@ -31,12 +31,15 @@ const initDb = async () => {
     await client.query(`
       CREATE TABLE IF NOT EXISTS projects (
         id UUID PRIMARY KEY,
+        project_code VARCHAR(100),
         project_name VARCHAR(255) NOT NULL,
         customer VARCHAR(255),
         region VARCHAR(255),
         start_date TIMESTAMP,
         end_date TIMESTAMP,
         pic VARCHAR(255),
+        whatsapp_number VARCHAR(100),
+        project_type VARCHAR(100),
         status VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -59,10 +62,11 @@ const initDb = async () => {
       CREATE TABLE IF NOT EXISTS material_masters (
         id UUID PRIMARY KEY,
         material_code VARCHAR(100) UNIQUE NOT NULL,
-        material_name VARCHAR(255) NOT NULL,
-        category VARCHAR(100),
+        material_name TEXT NOT NULL,
+        category TEXT,
         specification TEXT,
         unit VARCHAR(50),
+        unit_price NUMERIC(15,2) DEFAULT 0,
         minimum_stock INTEGER DEFAULT 0,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -16,78 +17,105 @@ import { toast } from 'sonner';
 import { DataTablePagination } from '@/components/shared/DataTablePagination';
 
 export default function WarehousePage() {
- const [warehouses, setWarehouses] = useState<any[]>([]);
- const [loading, setLoading] = useState(true);
- const [search, setSearch] = useState('');
- const [filterType, setFilterType] = useState('ALL');
- const [filterStatus, setFilterStatus] = useState('ALL');
- const [sortBy, setSortBy] = useState('name-asc');
- 
- const [page, setPage] = useState(1);
- const [pageSize, setPageSize] = useState(10);
- 
- // Modal state
- const [isOpen, setIsOpen] = useState(false);
- const [isSubmitting, setIsSubmitting] = useState(false);
- const [editId, setEditId] = useState<string | null>(null);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState('ALL');
+  const [filterStatus, setFilterStatus] = useState('ALL');
+  const [sortBy, setSortBy] = useState('name-asc');
+  
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
- // Delete state
- const [deleteOpen, setDeleteOpen] = useState(false);
- const [deleteId, setDeleteId] = useState<string | null>(null);
+  // Modal state
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
 
- // Preview state
- const [previewImage, setPreviewImage] = useState<string | null>(null);
+  // Delete state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
- const [formData, setFormData] = useState({
- code: '',
- name: '',
- location: '',
- coordinates: '',
- evidence: '',
- type: 'MAIN',
- capacity: '',
- status: 'ACTIVE'
- });
+  // Preview state
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
- const [isUploading, setIsUploading] = useState(false);
+  const [formData, setFormData] = useState({
+    code: '',
+    name: '',
+    location: '',
+    coordinates: '',
+    evidence: '',
+    type: 'MAIN',
+    capacity: '',
+    status: 'ACTIVE'
+  });
 
- const fetchWarehouses = async () => {
- setLoading(true);
- try {
- const { data } = await api.get('/api/warehouse', { params: { search, type: filterType, status: filterStatus, sort: sortBy } });
- setWarehouses(data.data || []);
- } catch (e) { 
- console.error(e); 
- } finally { 
- setLoading(false); 
- }
- };
+  const [isUploading, setIsUploading] = useState(false);
 
- useEffect(() => {
- fetchWarehouses();
- setPage(1); // Reset page on filter change
- }, [search, filterType, filterStatus, sortBy]);
+  const fetchWarehouses = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/api/warehouse', { params: { search, type: filterType, status: filterStatus, sort: sortBy } });
+      setWarehouses(data.data || []);
+    } catch (e) { 
+      console.error(e);
+      toast.error('Failed to load warehouses');
+    } finally { 
+      setLoading(false); 
+    }
+  };
 
- const openCreateDialog = () => {
- setEditId(null);
- setFormData({ code: '', name: '', location: '', coordinates: '', evidence: '', type: 'MAIN', capacity: '', status: 'ACTIVE' });
- setIsOpen(true);
- };
+  useEffect(() => {
+    fetchWarehouses();
+    setPage(1);
+    setSelectedIds([]);
+  }, [search, filterType, filterStatus, sortBy]);
 
- const openEditDialog = (w: any) => {
- setEditId(w.id);
- setFormData({
- code: w.code,
- name: w.name,
- location: w.location || '',
- coordinates: w.coordinates || '',
- evidence: w.evidence || '',
- type: w.type || 'MAIN',
- capacity: w.capacity ? w.capacity.toString() : '',
- status: w.status || 'ACTIVE'
- });
- setIsOpen(true);
- };
+  const currentPageWarehouses = warehouses.slice((page - 1) * pageSize, page * pageSize);
+  const currentPageIds = currentPageWarehouses.map(w => w.id);
+
+  const isAllCurrentPageSelected = currentPageIds.length > 0 && currentPageIds.every(id => selectedIds.includes(id));
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(Array.from(new Set([...selectedIds, ...currentPageIds])));
+    } else {
+      setSelectedIds(selectedIds.filter(id => !currentPageIds.includes(id)));
+    }
+  };
+
+  const handleSelectRow = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds(prev => [...prev, id]);
+    } else {
+      setSelectedIds(prev => prev.filter(item => item !== id));
+    }
+  };
+
+  const openCreateDialog = () => {
+    setEditId(null);
+    setFormData({ code: '', name: '', location: '', coordinates: '', evidence: '', type: 'MAIN', capacity: '', status: 'ACTIVE' });
+    setIsOpen(true);
+  };
+
+  const openEditDialog = (w: any) => {
+    setEditId(w.id);
+    setFormData({
+      code: w.code,
+      name: w.name,
+      location: w.location || '',
+      coordinates: w.coordinates || '',
+      evidence: w.evidence || '',
+      type: w.type || 'MAIN',
+      capacity: w.capacity ? w.capacity.toString() : '',
+      status: w.status || 'ACTIVE'
+    });
+    setIsOpen(true);
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -116,41 +144,60 @@ export default function WarehousePage() {
     }
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
- e.preventDefault();
- setIsSubmitting(true);
- try {
- if (editId) {
- await api.put('/api/warehouse', { id: editId, ...formData, capacity: parseInt(formData.capacity) || 0 });
- } else {
- await api.post('/api/warehouse', { ...formData, capacity: parseInt(formData.capacity) || 0 });
- }
-  setIsOpen(false);
-  fetchWarehouses();
-  toast.success(`Warehouse ${editId ? 'updated' : 'created'} successfully`);
- } catch (error) {
-  console.error('Error saving warehouse:', error);
-  toast.error('Failed to save Warehouse');
- } finally {
- setIsSubmitting(false);
- }
- };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      if (editId) {
+        await api.put('/api/warehouse', { id: editId, ...formData, capacity: parseInt(formData.capacity) || 0 });
+      } else {
+        await api.post('/api/warehouse', { ...formData, capacity: parseInt(formData.capacity) || 0 });
+      }
+      setIsOpen(false);
+      fetchWarehouses();
+      toast.success(`Warehouse ${editId ? 'updated' : 'created'} successfully`);
+    } catch (error) {
+      console.error('Error saving warehouse:', error);
+      toast.error('Failed to save Warehouse');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
- const confirmDelete = async () => {
- if (!deleteId) return;
- setIsSubmitting(true);
- try {
- await api.delete(`/api/warehouse?id=${deleteId}`);
-  setDeleteOpen(false);
-  fetchWarehouses();
-  toast.success('Warehouse deleted successfully');
- } catch (error) {
-  console.error('Failed to delete warehouse', error);
-  toast.error('Failed to delete warehouse');
- } finally {
- setIsSubmitting(false);
- }
- };
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    setIsSubmitting(true);
+    try {
+      await api.delete(`/api/warehouse?id=${deleteId}`);
+      setDeleteOpen(false);
+      setSelectedIds(prev => prev.filter(id => id !== deleteId));
+      fetchWarehouses();
+      toast.success('Warehouse deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete warehouse', error);
+      toast.error('Failed to delete warehouse');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      await api.delete('/api/warehouse', { data: { ids: selectedIds } });
+      toast.success(`Successfully deleted ${selectedIds.length} warehouses`);
+      setSelectedIds([]);
+      setBulkDeleteOpen(false);
+      fetchWarehouses();
+    } catch (error: any) {
+      console.error('Failed to bulk delete warehouses', error);
+      const errMsg = error.response?.data?.message || 'Failed to delete selected warehouses';
+      toast.error(errMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleImport = async (file: File) => {
     const formData = new FormData();
@@ -159,11 +206,24 @@ export default function WarehousePage() {
       const res = await api.post('/api/warehouse/excel', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      toast.success(`Imported successfully. Processed ${res.data.count} items.`);
+      const { count, createdCount, updatedCount, errors } = res.data;
+      let msg = `Import succeeded. ${count} item(s) processed.`;
+      if (createdCount !== undefined && updatedCount !== undefined) {
+        msg = `Import berhasil: ${createdCount} baru dibuat, ${updatedCount} diperbarui.`;
+      }
+      toast.success(msg);
+
+      if (errors && errors.length > 0) {
+        toast.warning(`${errors.length} item ada catatan/peringatan`, {
+          description: errors.slice(0, 3).join(', ')
+        });
+      }
+
       fetchWarehouses();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      toast.error('Failed to import Excel');
+      const errMsg = e.response?.data?.message || 'Failed to import Excel';
+      toast.error(errMsg);
     }
   };
 
@@ -175,35 +235,48 @@ export default function WarehousePage() {
     window.location.href = '/api/warehouse/excel?action=template';
   };
 
- return (
- <div className="space-y-6">
-  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-fade-in">
-    <div>
-        <h1 className="text-2xl font-bold">Warehouse Management</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Manage storage locations and capacity</p>
-    </div>
-    <div className="flex items-center gap-3 bg-card border rounded-xl px-4 py-3 shadow-sm shrink-0">
-        <div className="bg-primary/10 p-2.5 rounded-lg">
-            <Warehouse className="w-5 h-5 text-primary" />
-        </div>
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-fade-in">
         <div>
+          <h1 className="text-2xl font-bold">Warehouse Management</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Manage storage locations and capacity</p>
+        </div>
+        <div className="flex items-center gap-3 bg-card border rounded-xl px-4 py-3 shadow-sm shrink-0">
+          <div className="bg-primary/10 p-2.5 rounded-lg">
+            <Warehouse className="w-5 h-5 text-primary" />
+          </div>
+          <div>
             <p className="text-xs text-muted-foreground font-medium mb-0.5">Total Warehouses</p>
             <p className="text-2xl font-bold leading-none">{warehouses.length}</p>
+          </div>
         </div>
-    </div>
-  </div>
+      </div>
 
       <div className="flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
-        <div className="flex justify-between items-center">
+        <div className="flex flex-wrap justify-between items-center gap-3">
           <ExcelImportExport 
             onImport={handleImport} 
             onExport={handleExport} 
             onDownloadTemplate={handleDownloadTemplate} 
             isLoading={loading} 
           />
-          <Button onClick={openCreateDialog} className="gap-2 shrink-0">
-            <Plus className="w-4 h-4" /> New Warehouse
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="gap-2 h-9"
+                onClick={() => setBulkDeleteOpen(true)}
+              >
+                <Trash2 className="w-4 h-4" />
+                Hapus Terpilih ({selectedIds.length})
+              </Button>
+            )}
+            <Button onClick={openCreateDialog} className="gap-2 shrink-0 h-9">
+              <Plus className="w-4 h-4" /> New Warehouse
+            </Button>
+          </div>
         </div>
         
         <div className="flex flex-wrap gap-4 items-end bg-card p-4 rounded-xl border border-border">
@@ -265,281 +338,368 @@ export default function WarehousePage() {
         </div>
       </div>
 
- <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
- {loading ? (
- <div className="p-8 text-center flex flex-col items-center bg-card border rounded-xl ">
- <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
- <p className="text-muted-foreground">Loading warehouses...</p>
- </div>
- ) : warehouses.length > 0 ? (
- <>
- <Table className="whitespace-nowrap">
- <TableHeader>
- <TableRow>
- <TableHead className="w-[150px]">Code</TableHead>
- <TableHead className="w-[250px]">Name</TableHead>
- <TableHead className="w-[200px]">Location</TableHead>
- <TableHead className="w-[150px]">Coordinates</TableHead>
- <TableHead className="w-[150px]">Evidence</TableHead>
- <TableHead className="w-[150px]">Type</TableHead>
- <TableHead className="w-[120px]">Status</TableHead>
- <TableHead className="w-[80px] text-right">Action</TableHead>
- </TableRow>
- </TableHeader>
- <TableBody>
- {warehouses.slice((page - 1) * pageSize, page * pageSize).map((w) => (
- <TableRow key={w.id} className="hover:bg-muted/30">
- <TableCell className="font-medium text-primary">{w.code}</TableCell>
- <TableCell className="font-medium">{w.name}</TableCell>
- <TableCell className="whitespace-normal max-w-[300px]">{w.location}</TableCell>
- <TableCell>
-    {w.coordinates ? (
-      <DropdownMenu>
-        <DropdownMenuTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/30 px-2 py-1 rounded-md w-fit hover:bg-muted/50 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-primary/20">
-          <MapPin className="w-3 h-3 text-primary" />
-          {w.coordinates.split(',').map((c: string) => parseFloat(c.trim()).toFixed(5)).join(', ')}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(w.coordinates)}`, '_blank')} className="flex items-center gap-2 cursor-pointer">
-            <Map className="w-4 h-4 text-muted-foreground" />
-            Google Maps
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => window.open(`https://earth.google.com/web/search/${encodeURIComponent(w.coordinates)}`, '_blank')} className="flex items-center gap-2 cursor-pointer">
-            <Globe className="w-4 h-4 text-muted-foreground" />
-            Google Earth
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ) : (
-     <span className="text-muted-foreground opacity-50">-</span>
-   )}
- </TableCell>
- <TableCell>
-     {w.evidence ? (
-       <button onClick={() => setPreviewImage(w.evidence)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-         <img src={w.evidence} alt="Evidence" className="w-8 h-8 object-cover rounded-md border" />
-       </button>
-     ) : (
-       <span className="text-muted-foreground opacity-50">-</span>
-     )}
-   </TableCell>
- <TableCell className="text-muted-foreground">{w.type}</TableCell>
- <TableCell><StatusBadge status={w.status} /></TableCell>
- <TableCell className="text-right">
- <div className="flex justify-end gap-2">
- <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEditDialog(w)}>
- <Pencil className="h-4 w-4" />
- </Button>
- <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { setDeleteId(w.id); setDeleteOpen(true); }}>
- <Trash2 className="h-4 w-4" />
- </Button>
- </div>
- </TableCell>
- </TableRow>
- ))}
- </TableBody>
- </Table>
- <DataTablePagination 
-    totalItems={warehouses.length} 
-    pageSize={pageSize} 
-    currentPage={page} 
-    onPageChange={setPage} 
-    onPageSizeChange={setPageSize} 
- />
- </>
- ) : (
- <div className="text-center py-16 bg-card border rounded-xl ">
- <Warehouse className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
- <p className="text-muted-foreground">No warehouses found</p>
- <Button variant="link" onClick={openCreateDialog} className="mt-2">
- Create your first Warehouse
- </Button>
- </div>
- )}
- </div>
+      {/* Selected Items Notification Bar */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center justify-between bg-primary/10 border border-primary/20 p-3 rounded-lg animate-fade-in">
+          <span className="text-sm font-medium text-primary">
+            {selectedIds.length} warehouse dipilih
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedIds([])}
+            >
+              Batal Pilih
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-2"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 className="w-4 h-4" />
+              Hapus ({selectedIds.length})
+            </Button>
+          </div>
+        </div>
+      )}
 
- <Dialog open={isOpen} onOpenChange={setIsOpen}>
- <DialogContent>
- <form onSubmit={handleSubmit}>
- <DialogHeader>
- <DialogTitle>{editId ? 'Edit Warehouse' : 'New Warehouse'}</DialogTitle>
- <DialogDescription>{editId ? 'Update warehouse details.' : 'Add a new warehouse location.'}</DialogDescription>
- </DialogHeader>
- <div className="grid gap-4 py-4">
- <div className="grid gap-2">
- <Label htmlFor="code">Warehouse Code *</Label>
- <Input 
- id="code" 
- placeholder="e.g. WH-JKT-01" 
- value={formData.code}
- onChange={(e) => setFormData({...formData, code: e.target.value})}
- required 
- />
- </div>
- <div className="grid gap-2">
- <Label htmlFor="name">Warehouse Name *</Label>
- <Input 
- id="name" 
- placeholder="e.g. Jakarta Central Hub" 
- value={formData.name}
- onChange={(e) => setFormData({...formData, name: e.target.value})}
- required 
- />
- </div>
- <div className="grid gap-2">
- <Label htmlFor="location">Location / Address</Label>
- <Input 
- id="location" 
- placeholder="e.g. Jl. Sudirman No. 123" 
- value={formData.location}
- onChange={(e) => setFormData({...formData, location: e.target.value})}
- />
- </div>
- <div className="grid gap-2">
- <Label htmlFor="coordinates">Coordinates (Lat, Long)</Label>
- <Input 
- id="coordinates" 
- placeholder="e.g. -6.2234, 106.8463" 
- value={formData.coordinates}
- onChange={(e) => setFormData({...formData, coordinates: e.target.value})}
- />
- </div>
-    <div className="grid gap-2 min-w-0">
-      <Label>Warehouse Evidence (Photo)</Label>
-      <div className="flex flex-col gap-3 min-w-0">
-       {!formData.evidence && (
-         <Button variant="outline" type="button" className="relative overflow-hidden cursor-pointer w-full sm:w-fit">
-           {isUploading ? (
-             <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploading...</>
-           ) : (
-             <><Upload className="w-4 h-4 mr-2" /> Select File</>
-           )}
-           <input 
-             type="file" 
-             accept="image/*" 
-             className="absolute inset-0 opacity-0 cursor-pointer" 
-             onChange={handleFileUpload} 
-             disabled={isUploading}
-           />
-         </Button>
-       )}
-        {formData.evidence && (
-          <div className="flex items-center justify-between p-2.5 border rounded-xl bg-card w-full shadow-sm overflow-hidden">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 border">
-                <img src={formData.evidence} alt="Preview" className="w-full h-full object-cover" />
-              </div>
-              <div className="flex flex-col min-w-0 pr-2">
-                <span className="text-sm font-medium truncate">{formData.evidence.split('/').pop()?.split('?')[0] || 'evidence_file'}</span>
-                <span className="text-xs text-muted-foreground uppercase">{formData.evidence.split('.').pop()?.split('?')[0] || 'IMG'} • File</span>
-              </div>
-            </div>
-            <Button variant="ghost" size="icon" type="button" onClick={() => setFormData({ ...formData, evidence: '' })} className="h-8 w-8 text-muted-foreground shrink-0">
-              <X className="w-4 h-4" />
+      <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+        {loading ? (
+          <div className="p-8 text-center flex flex-col items-center bg-card border rounded-xl ">
+            <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
+            <p className="text-muted-foreground">Loading warehouses...</p>
+          </div>
+        ) : warehouses.length > 0 ? (
+          <>
+            <Table className="whitespace-nowrap">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={isAllCurrentPageSelected}
+                      onCheckedChange={handleSelectAll}
+                      aria-label="Select all on current page"
+                    />
+                  </TableHead>
+                  <TableHead className="w-[150px]">Code</TableHead>
+                  <TableHead className="w-[350px]">Name</TableHead>
+                  <TableHead className="w-[280px]">Location</TableHead>
+                  <TableHead className="w-[150px]">Coordinates</TableHead>
+                  <TableHead className="w-[100px]">Evidence</TableHead>
+                  <TableHead className="w-[120px]">Type</TableHead>
+                  <TableHead className="w-[120px]">Status</TableHead>
+                  <TableHead className="w-[80px] text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {currentPageWarehouses.map((w) => {
+                  const isSelected = selectedIds.includes(w.id);
+                  return (
+                    <TableRow 
+                      key={w.id} 
+                      className={`hover:bg-muted/30 ${isSelected ? 'bg-muted/50' : ''}`}
+                    >
+                      <TableCell className="w-[40px]">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => handleSelectRow(w.id, !!checked)}
+                          aria-label={`Select ${w.code}`}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium text-primary w-[150px] whitespace-normal break-words">
+                        {w.code}
+                      </TableCell>
+                      <TableCell className="font-medium whitespace-normal max-w-[350px]">
+                        <span 
+                          className="line-clamp-2 block leading-snug break-words"
+                          style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                          title={w.name}
+                        >
+                          {w.name}
+                        </span>
+                      </TableCell>
+                      <TableCell className="whitespace-normal max-w-[280px] text-xs text-muted-foreground">
+                        <span 
+                          className="line-clamp-2 block leading-snug break-words"
+                          style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                          title={w.location || '-'}
+                        >
+                          {w.location || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {w.coordinates ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/30 px-2 py-1 rounded-md w-fit hover:bg-muted/50 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-primary/20">
+                              <MapPin className="w-3 h-3 text-primary" />
+                              {w.coordinates.split(',').map((c: string) => parseFloat(c.trim()).toFixed(5)).join(', ')}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                              <DropdownMenuItem onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(w.coordinates)}`, '_blank')} className="flex items-center gap-2 cursor-pointer">
+                                <Map className="w-4 h-4 text-muted-foreground" />
+                                Google Maps
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => window.open(`https://earth.google.com/web/search/${encodeURIComponent(w.coordinates)}`, '_blank')} className="flex items-center gap-2 cursor-pointer">
+                                <Globe className="w-4 h-4 text-muted-foreground" />
+                                Google Earth
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <span className="text-muted-foreground opacity-50">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {w.evidence ? (
+                          <button onClick={() => setPreviewImage(w.evidence)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                            <img src={w.evidence} alt="Evidence" className="w-8 h-8 object-cover rounded-md border" />
+                          </button>
+                        ) : (
+                          <span className="text-muted-foreground opacity-50">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{w.type}</TableCell>
+                      <TableCell><StatusBadge status={w.status} /></TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEditDialog(w)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { setDeleteId(w.id); setDeleteOpen(true); }}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+            <DataTablePagination 
+              totalItems={warehouses.length} 
+              pageSize={pageSize} 
+              currentPage={page} 
+              onPageChange={setPage} 
+              onPageSizeChange={setPageSize} 
+            />
+          </>
+        ) : (
+          <div className="text-center py-16 bg-card border rounded-xl ">
+            <Warehouse className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+            <p className="text-muted-foreground">No warehouses found</p>
+            <Button variant="link" onClick={openCreateDialog} className="mt-2">
+              Create your first Warehouse
             </Button>
           </div>
         )}
-     </div>
-   </div>
- <div className="grid grid-cols-2 gap-4">
- <div className="grid gap-2">
- <Label htmlFor="type">Type</Label>
- <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val || "" })}>
- <SelectTrigger>
- <SelectValue placeholder="Select Type" />
- </SelectTrigger>
- <SelectContent>
- <SelectItem value="MAIN">Main Hub</SelectItem>
- <SelectItem value="SITE">Site Storage</SelectItem>
- <SelectItem value="TRANSIT">Transit Point</SelectItem>
- </SelectContent>
- </Select>
- </div>
- <div className="grid gap-2">
- <Label htmlFor="capacity">Capacity (CBM)</Label>
- <Input 
- id="capacity" 
- type="number"
- placeholder="e.g. 5000" 
- value={formData.capacity}
- onChange={(e) => setFormData({...formData, capacity: e.target.value})}
- />
- </div>
- </div>
- {editId && (
- <div className="grid gap-2">
- <Label htmlFor="status">Status</Label>
- <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val || "" })}>
- <SelectTrigger>
- <SelectValue placeholder="Status" />
- </SelectTrigger>
- <SelectContent>
- <SelectItem value="ACTIVE">Active</SelectItem>
- <SelectItem value="INACTIVE">Inactive</SelectItem>
- <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
- </SelectContent>
- </Select>
- </div>
- )}
- </div>
- <DialogFooter>
- <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>
- Cancel
- </Button>
- <Button type="submit" disabled={isSubmitting}>
- {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
- {editId ? 'Save Changes' : 'Save Warehouse'}
- </Button>
- </DialogFooter>
- </form>
- </DialogContent>
- </Dialog>
+      </div>
 
- <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
- <DialogContent className="sm:max-w-[425px]">
- <DialogHeader>
- <DialogTitle>Confirm Deletion</DialogTitle>
- <DialogDescription>
- Are you sure you want to delete this warehouse? This action cannot be undone.
- </DialogDescription>
- </DialogHeader>
- <DialogFooter className="pt-4">
- <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
- Cancel
- </Button>
- <Button type="button" variant="destructive" onClick={confirmDelete} disabled={isSubmitting}>
- {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
- Delete
- </Button>
- </DialogFooter>
- </DialogContent>
- </Dialog>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent>
+          <form onSubmit={handleSubmit}>
+            <DialogHeader>
+              <DialogTitle>{editId ? 'Edit Warehouse' : 'New Warehouse'}</DialogTitle>
+              <DialogDescription>{editId ? 'Update warehouse details.' : 'Add a new warehouse location.'}</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="code">Warehouse Code *</Label>
+                <Input 
+                  id="code" 
+                  placeholder="e.g. WH-JKT-01" 
+                  value={formData.code}
+                  onChange={(e) => setFormData({...formData, code: e.target.value})}
+                  required 
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="name">Warehouse Name *</Label>
+                <Input 
+                  id="name" 
+                  placeholder="e.g. Jakarta Central Hub" 
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  required 
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="location">Location / Address</Label>
+                <Input 
+                  id="location" 
+                  placeholder="e.g. Jl. Sudirman No. 123" 
+                  value={formData.location}
+                  onChange={(e) => setFormData({...formData, location: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="coordinates">Coordinates (Lat, Long)</Label>
+                <Input 
+                  id="coordinates" 
+                  placeholder="e.g. -6.2234, 106.8463" 
+                  value={formData.coordinates}
+                  onChange={(e) => setFormData({...formData, coordinates: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-2 min-w-0">
+                <Label>Warehouse Evidence (Photo)</Label>
+                <div className="flex flex-col gap-3 min-w-0">
+                  {!formData.evidence && (
+                    <Button variant="outline" type="button" className="relative overflow-hidden cursor-pointer w-full sm:w-fit">
+                      {isUploading ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploading...</>
+                      ) : (
+                        <><Upload className="w-4 h-4 mr-2" /> Select File</>
+                      )}
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                        onChange={handleFileUpload} 
+                        disabled={isUploading}
+                      />
+                    </Button>
+                  )}
+                  {formData.evidence && (
+                    <div className="flex items-center justify-between p-2.5 border rounded-xl bg-card w-full shadow-sm overflow-hidden">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 border">
+                          <img src={formData.evidence} alt="Preview" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex flex-col min-w-0 pr-2">
+                          <span className="text-sm font-medium truncate">{formData.evidence.split('/').pop()?.split('?')[0] || 'evidence_file'}</span>
+                          <span className="text-xs text-muted-foreground uppercase">{formData.evidence.split('.').pop()?.split('?')[0] || 'IMG'} • File</span>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="icon" type="button" onClick={() => setFormData({ ...formData, evidence: '' })} className="h-8 w-8 text-muted-foreground shrink-0">
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="type">Type</Label>
+                  <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val || "" })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MAIN">Main Hub</SelectItem>
+                      <SelectItem value="SITE">Site Storage</SelectItem>
+                      <SelectItem value="TRANSIT">Transit Point</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="capacity">Capacity (CBM)</Label>
+                  <Input 
+                    id="capacity" 
+                    type="number"
+                    placeholder="e.g. 5000" 
+                    value={formData.capacity}
+                    onChange={(e) => setFormData({...formData, capacity: e.target.value})}
+                  />
+                </div>
+              </div>
+              {editId && (
+                <div className="grid gap-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val || "" })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ACTIVE">Active</SelectItem>
+                      <SelectItem value="INACTIVE">Inactive</SelectItem>
+                      <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                {editId ? 'Save Changes' : 'Save Warehouse'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
- <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
-   <DialogContent className="sm:max-w-xl p-0 overflow-hidden">
-     <div className="flex items-center justify-between p-4 border-b">
-       <div className="flex items-center gap-2 text-sm font-medium">
-         <ImageIcon className="w-4 h-4 text-muted-foreground" />
-         Evidence Preview
-       </div>
-       <div className="flex items-center gap-2">
-         {previewImage && (
-           <Button variant="outline" size="sm" >
-             <a href={previewImage} target="_blank" rel="noreferrer" className="flex items-center gap-2">
-               <ExternalLink className="w-4 h-4" /> Open in new tab
-             </a>
-           </Button>
-         )}
-       </div>
-     </div>
-     <div className="bg-muted p-4 flex items-center justify-center min-h-[300px]">
-       {previewImage && (
-         <img src={previewImage} alt="Preview" className="max-w-full max-h-[70vh] rounded-md shadow-sm border bg-background" />
-       )}
-     </div>
-   </DialogContent>
- </Dialog>
+      {/* Single Delete Dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this warehouse? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="pt-4">
+            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" onClick={confirmDelete} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
- </div>
- );
+      {/* Bulk Delete Dialog */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Hapus Banyak ({selectedIds.length} item)</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus <strong>{selectedIds.length} warehouse</strong> yang dipilih? Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="pt-4">
+            <Button type="button" variant="outline" onClick={() => setBulkDeleteOpen(false)}>
+              Batal
+            </Button>
+            <Button type="button" variant="destructive" onClick={confirmBulkDelete} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Hapus Semua ({selectedIds.length})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+        <DialogContent className="sm:max-w-xl p-0 overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <ImageIcon className="w-4 h-4 text-muted-foreground" />
+              Evidence Preview
+            </div>
+            <div className="flex items-center gap-2">
+              {previewImage && (
+                <Button variant="outline" size="sm">
+                  <a href={previewImage} target="_blank" rel="noreferrer" className="flex items-center gap-2">
+                    <ExternalLink className="w-4 h-4" /> Open in new tab
+                  </a>
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="bg-muted p-4 flex items-center justify-center min-h-[300px]">
+            {previewImage && (
+              <img src={previewImage} alt="Preview" className="max-w-full max-h-[70vh] rounded-md shadow-sm border bg-background" />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+    </div>
+  );
 }

@@ -2,6 +2,35 @@ import { NextRequest, NextResponse } from 'next/server';
 import { pool, generateId } from '@/lib/db';
 import * as xlsx from 'xlsx';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
+function getValueByPossibleKeys(item: Record<string, any>, possibleKeys: string[]): any {
+  for (const key of possibleKeys) {
+    if (item[key] !== undefined && item[key] !== null && item[key] !== '') {
+      return item[key];
+    }
+  }
+  const itemKeys = Object.keys(item);
+  for (const pKey of possibleKeys) {
+    const matchedKey = itemKeys.find(k => k.trim().toLowerCase() === pKey.trim().toLowerCase());
+    if (matchedKey && item[matchedKey] !== undefined && item[matchedKey] !== null && item[matchedKey] !== '') {
+      return item[matchedKey];
+    }
+  }
+  return undefined;
+}
+
+interface ParsedMaterialItem {
+  rowIndex: number;
+  code: string;
+  name: string;
+  category: string;
+  uom: string;
+  unitPrice: number;
+  desc: string;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -14,43 +43,153 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
     const workbook = xlsx.read(buffer, { type: 'buffer' });
     
-    if (workbook.SheetNames.length === 0) {
+    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
       return NextResponse.json({ message: 'Empty excel file' }, { status: 400 });
     }
 
     const worksheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[worksheetName];
-    const data = xlsx.utils.sheet_to_json(worksheet);
+    const data = xlsx.utils.sheet_to_json<Record<string, any>>(worksheet);
 
-    let count = 0;
-    
-    // Process items
-    for (const item of data as any[]) {
-      // Map columns based on template
-      const code = item['Material Code'] || item['Code'];
-      const name = item['Material Name'] || item['Name'];
-      const category = item['Category'] || item['Group'] || 'STANDARD';
-      const uom = item['UOM'] || item['Unit'] || 'Pcs';
-      const desc = item['Description'] || item['Specification'] || '';
+    if (!data || data.length === 0) {
+      return NextResponse.json({ message: 'No data rows found in the Excel sheet' }, { status: 400 });
+    }
 
-      if (!code || !name) continue; // Skip invalid rows
+    let createdCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+    const validItems: ParsedMaterialItem[] = [];
 
-      // Check if code exists
-      const existing = await pool.query('SELECT id FROM material_masters WHERE material_code = $1', [code]);
-      if (existing.rowCount === 0) {
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+      const rowIndex = i + 2;
+
+      const rawCode = getValueByPossibleKeys(item, [
+        'Material Code', 'Kode Material', 'Code', 'Kode', 'material_code', 'CODE', 'Item Code', 'Kode Barang'
+      ]);
+      const rawName = getValueByPossibleKeys(item, [
+        'Material Name', 'Nama Material', 'Name', 'Nama', 'material_name', 'NAME', 'Nama Barang'
+      ]);
+      const rawCategory = getValueByPossibleKeys(item, [
+        'Category', 'Kategori', 'Group', 'Grup', 'category', 'Kelompok'
+      ]);
+      const rawUom = getValueByPossibleKeys(item, [
+        'UOM', 'Satuan', 'Unit', 'unit', 'uom'
+      ]);
+      const rawUnitPrice = getValueByPossibleKeys(item, [
+        'Unit Price', 'Harga Satuan', 'Harga', 'Price', 'unit_price', 'Harga (Rp)'
+      ]);
+      const rawDesc = getValueByPossibleKeys(item, [
+        'Description', 'Keterangan', 'Deskripsi', 'Specification', 'Spesifikasi', 'specification'
+      ]);
+
+      if (!rawCode || !rawName) {
+        skippedCount++;
+        errors.push(`Baris ${rowIndex}: Kode atau Nama material kosong`);
+        continue;
+      }
+
+      const parsedPrice = rawUnitPrice ? (parseFloat(String(rawUnitPrice).replace(/[^0-9.-]+/g, '')) || 0) : 0;
+
+      validItems.push({
+        rowIndex,
+        code: String(rawCode).trim(),
+        name: String(rawName).trim(),
+        category: rawCategory ? String(rawCategory).trim().toUpperCase() : 'OTHER',
+        uom: rawUom ? String(rawUom).trim() : 'Pcs',
+        unitPrice: parsedPrice,
+        desc: rawDesc ? String(rawDesc).trim() : ''
+      });
+    }
+
+    const BATCH_SIZE = 200;
+    for (let b = 0; b < validItems.length; b += BATCH_SIZE) {
+      const chunk = validItems.slice(b, b + BATCH_SIZE);
+
+      const valueClauses: string[] = [];
+      const params: any[] = [];
+      let paramIdx = 1;
+
+      for (const item of chunk) {
         const id = generateId();
-        await pool.query(`
-          INSERT INTO material_masters (id, material_code, material_name, category, specification, unit, minimum_stock, is_active)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        `, [id, code, name, category, desc, uom, 0, true]);
-        count++;
+        valueClauses.push(
+          `($${paramIdx}, $${paramIdx + 1}, $${paramIdx + 2}, $${paramIdx + 3}, $${paramIdx + 4}, $${paramIdx + 5}, $${paramIdx + 6}, $${paramIdx + 7}, $${paramIdx + 8})`
+        );
+        params.push(id, item.code, item.name, item.category, item.desc, item.uom, item.unitPrice, 0, true);
+        paramIdx += 9;
+      }
+
+      const bulkQuery = `
+        INSERT INTO material_masters (id, material_code, material_name, category, specification, unit, unit_price, minimum_stock, is_active)
+        VALUES ${valueClauses.join(', ')}
+        ON CONFLICT (material_code) 
+        DO UPDATE SET
+          material_name = EXCLUDED.material_name,
+          category = EXCLUDED.category,
+          specification = EXCLUDED.specification,
+          unit = EXCLUDED.unit,
+          unit_price = EXCLUDED.unit_price,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING (xmax = 0) AS is_inserted;
+      `;
+
+      try {
+        const res = await pool.query(bulkQuery, params);
+        res.rows.forEach((row: any) => {
+          if (row.is_inserted) {
+            createdCount++;
+          } else {
+            updatedCount++;
+          }
+        });
+      } catch (err: any) {
+        console.warn(`Batch query failed for chunk at offset ${b}, falling back to row-by-row:`, err.message);
+        for (const item of chunk) {
+          try {
+            const id = generateId();
+            const res = await pool.query(`
+              INSERT INTO material_masters (id, material_code, material_name, category, specification, unit, unit_price, minimum_stock, is_active)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+              ON CONFLICT (material_code) 
+              DO UPDATE SET
+                material_name = EXCLUDED.material_name,
+                category = EXCLUDED.category,
+                specification = EXCLUDED.specification,
+                unit = EXCLUDED.unit,
+                unit_price = EXCLUDED.unit_price,
+                updated_at = CURRENT_TIMESTAMP
+              RETURNING (xmax = 0) AS is_inserted;
+            `, [id, item.code, item.name, item.category, item.desc, item.uom, item.unitPrice, 0, true]);
+
+            if (res.rows[0]?.is_inserted) {
+              createdCount++;
+            } else {
+              updatedCount++;
+            }
+          } catch (rowErr: any) {
+            errors.push(`Baris ${item.rowIndex} (${item.code}): ${rowErr.message || 'Gagal diproses'}`);
+          }
+        }
       }
     }
 
-    return NextResponse.json({ message: 'Success', count }, { status: 200 });
+    const totalProcessed = createdCount + updatedCount;
+
+    return NextResponse.json({
+      message: 'Success',
+      count: totalProcessed,
+      createdCount,
+      updatedCount,
+      skippedCount,
+      errors: errors.length > 0 ? errors : undefined
+    }, { status: 200 });
+
   } catch (error: any) {
     console.error('Excel import error:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      message: error?.message ? `Import gagal: ${error.message}` : 'Format file Excel tidak valid atau gagal dibaca' 
+    }, { status: 500 });
   }
 }
 
@@ -69,6 +208,7 @@ export async function GET(req: NextRequest) {
         'Material Name': row.material_name,
         'Category': row.category,
         'UOM': row.unit,
+        'Unit Price': parseFloat(row.unit_price) || 0,
         'Description': row.specification
       }));
     } else {
@@ -78,6 +218,7 @@ export async function GET(req: NextRequest) {
         'Material Name': 'Example Item',
         'Category': 'CABLE',
         'UOM': 'Meter',
+        'Unit Price': 15000,
         'Description': 'Example description'
       }];
     }
@@ -96,8 +237,8 @@ export async function GET(req: NextRequest) {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Excel export error:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
   }
 }

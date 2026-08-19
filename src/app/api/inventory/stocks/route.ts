@@ -18,7 +18,10 @@ export async function GET(request: Request) {
         w.code as "warehouseCode",
         m.material_code as "materialCode",
         m.material_name as "materialName",
-        m.category
+        m.category,
+        m.unit,
+        COALESCE(m.unit_price, 0) as "unitPrice",
+        SUM(s.quantity * COALESCE(m.unit_price, 0)) as "totalValue"
       FROM inventory_stocks s
       JOIN warehouses w ON s.warehouse_id = w.id
       JOIN material_masters m ON s.material_id = m.id
@@ -39,12 +42,19 @@ export async function GET(request: Request) {
       paramIndex++;
     }
 
-    queryStr += ' GROUP BY w.name, w.code, m.material_code, m.material_name, m.category';
+    queryStr += ' GROUP BY w.name, w.code, m.material_code, m.material_name, m.category, m.unit, m.unit_price';
     queryStr += ' ORDER BY w.name ASC, m.material_name ASC';
 
     const res = await pool.query(queryStr, queryParams);
 
-    return NextResponse.json({ data: res.rows }, { status: 200 });
+    const stocks = res.rows.map((row: any) => ({
+      ...row,
+      quantity: parseInt(row.quantity, 10) || 0,
+      unitPrice: parseFloat(row.unitPrice) || 0,
+      totalValue: parseFloat(row.totalValue) || 0
+    }));
+
+    return NextResponse.json({ data: stocks }, { status: 200 });
   } catch (error: any) {
     console.error('Error fetching stocks:', error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
