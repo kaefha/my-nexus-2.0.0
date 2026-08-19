@@ -124,18 +124,12 @@ export async function POST(req: NextRequest) {
           address = EXCLUDED.address,
           is_active = EXCLUDED.is_active,
           updated_at = CURRENT_TIMESTAMP
-        RETURNING (xmax = 0) AS is_inserted;
+        RETURNING id;
       `;
 
       try {
         const res = await pool.query(bulkQuery, params);
-        res.rows.forEach((row: any) => {
-          if (row.is_inserted) {
-            createdCount++;
-          } else {
-            updatedCount++;
-          }
-        });
+        updatedCount += res.rowCount || chunk.length;
       } catch (err: any) {
         console.warn(`Vendor batch query failed for chunk at offset ${b}, falling back to row-by-row:`, err.message);
         for (const item of chunk) {
@@ -153,12 +147,10 @@ export async function POST(req: NextRequest) {
                 address = EXCLUDED.address,
                 is_active = EXCLUDED.is_active,
                 updated_at = CURRENT_TIMESTAMP
-              RETURNING (xmax = 0) AS is_inserted;
+              RETURNING id;
             `, [id, item.vendorCode, item.name, item.contactPerson, item.email, item.phone, item.address, item.isActive]);
 
-            if (res.rows[0]?.is_inserted) {
-              createdCount++;
-            } else {
+            if (res.rowCount && res.rowCount > 0) {
               updatedCount++;
             }
           } catch (rowErr: any) {

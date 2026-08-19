@@ -131,18 +131,13 @@ export async function POST(req: NextRequest) {
           unit = EXCLUDED.unit,
           unit_price = EXCLUDED.unit_price,
           updated_at = CURRENT_TIMESTAMP
-        RETURNING (xmax = 0) AS is_inserted;
+        RETURNING id;
       `;
 
       try {
         const res = await pool.query(bulkQuery, params);
-        res.rows.forEach((row: any) => {
-          if (row.is_inserted) {
-            createdCount++;
-          } else {
-            updatedCount++;
-          }
-        });
+        // Supabase PgBouncer (Vercel) fails with xmax=0, so we count them all as processed
+        updatedCount += res.rowCount || chunk.length;
       } catch (err: any) {
         console.warn(`Batch query failed for chunk at offset ${b}, falling back to row-by-row:`, err.message);
         for (const item of chunk) {
@@ -159,12 +154,10 @@ export async function POST(req: NextRequest) {
                 unit = EXCLUDED.unit,
                 unit_price = EXCLUDED.unit_price,
                 updated_at = CURRENT_TIMESTAMP
-              RETURNING (xmax = 0) AS is_inserted;
+              RETURNING id;
             `, [id, item.code, item.name, item.category, item.desc, item.uom, item.unitPrice, 0, true]);
 
-            if (res.rows[0]?.is_inserted) {
-              createdCount++;
-            } else {
+            if (res.rowCount && res.rowCount > 0) {
               updatedCount++;
             }
           } catch (rowErr: any) {

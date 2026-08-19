@@ -123,18 +123,12 @@ export async function POST(req: NextRequest) {
           capacity = EXCLUDED.capacity,
           status = EXCLUDED.status,
           updated_at = CURRENT_TIMESTAMP
-        RETURNING (xmax = 0) AS is_inserted;
+        RETURNING id;
       `;
 
       try {
         const res = await pool.query(bulkQuery, params);
-        res.rows.forEach((row: any) => {
-          if (row.is_inserted) {
-            createdCount++;
-          } else {
-            updatedCount++;
-          }
-        });
+        updatedCount += res.rowCount || chunk.length;
       } catch (err: any) {
         console.warn(`Warehouse batch query failed for chunk at offset ${b}, falling back to row-by-row:`, err.message);
         for (const item of chunk) {
@@ -152,12 +146,10 @@ export async function POST(req: NextRequest) {
                 capacity = EXCLUDED.capacity,
                 status = EXCLUDED.status,
                 updated_at = CURRENT_TIMESTAMP
-              RETURNING (xmax = 0) AS is_inserted;
+              RETURNING id;
             `, [id, item.code, item.name, item.location, item.coordinates, item.type, item.capacity, item.status]);
 
-            if (res.rows[0]?.is_inserted) {
-              createdCount++;
-            } else {
+            if (res.rowCount && res.rowCount > 0) {
               updatedCount++;
             }
           } catch (rowErr: any) {
