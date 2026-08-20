@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
     const client = await pool.connect();
     const role = user.role?.toUpperCase();
-    const userId = user.id;
+    const userId = user.sub || user.id;
 
     const dynamicNotifications: any[] = [];
 
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
           id: `rfc-${r.id}`,
           title: 'RFC Approval Required',
           message: `Request For Certificate ${r.rfc_number} is waiting for your approval.`,
-          link: '/rfc/approval',
+          link: `/rfc/approval?actionId=${r.id}`,
           createdAt: r.created_at,
           isRead: false,
           type: 'RFC_APPROVAL'

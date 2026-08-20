@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { CheckCircle, XCircle, Clock, Search, MapPin, Loader2, FileText, PenTool } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Search, MapPin, Loader2, FileText, PenTool, Eye } from 'lucide-react';
 import api from '@/lib/api';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { formatDate } from '@/lib/utils';
@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SignatureCanvas from 'react-signature-canvas';
 import { useAuth } from '@/hooks/useAuth';
 import { DataTablePagination } from '@/components/shared/DataTablePagination';
+import Link from 'next/link';
 
 export default function RfcApprovalPage() {
  const { user } = useAuth();
@@ -22,10 +23,14 @@ export default function RfcApprovalPage() {
  const [search, setSearch] = useState('');
  const [processingId, setProcessingId] = useState<string | null>(null);
  const [approvingRfc, setApprovingRfc] = useState<any | null>(null);
+ const [rejectingRfcId, setRejectingRfcId] = useState<string | null>(null);
  const [signedDocument, setSignedDocument] = useState<File | null>(null);
  
  const [page, setPage] = useState(1);
  const [pageSize, setPageSize] = useState(10);
+
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const actionId = searchParams?.get('actionId');
 
  useEffect(() => {
  fetchPendingRfcs();
@@ -48,6 +53,18 @@ export default function RfcApprovalPage() {
     return false;
   });
  setRfcs(pending);
+
+      // Auto-open modal if actionId is passed
+      if (actionId) {
+        const found = pending.find((r: any) => r.id === actionId);
+        if (found) {
+          setApprovingRfc(found);
+          // Optional: clear query param so it doesn't reopen on refresh
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({}, '', '/rfc/approval');
+          }
+        }
+      }
  } catch (error) {
  console.error(error);
  } finally {
@@ -91,6 +108,7 @@ export default function RfcApprovalPage() {
       
       setApprovingRfc(null);
       fetchPendingRfcs();
+      window.dispatchEvent(new Event('refreshNotifications'));
     } catch (error) {
       console.error('Failed to approve', error);
     } finally {
@@ -98,12 +116,14 @@ export default function RfcApprovalPage() {
     }
   };
 
-  const handleReject = async (id: string) => {
-    if (!confirm('Are you sure you want to reject this RFC?')) return;
-    setProcessingId(id);
+  const handleReject = async () => {
+    if (!rejectingRfcId) return;
+    setProcessingId(rejectingRfcId);
     try {
-      await api.patch(`/api/rfc/${id}`, { status: 'REJECTED', approverId: user?.id });
+      await api.patch(`/api/rfc/${rejectingRfcId}`, { status: 'REJECTED', approverId: user?.id });
       fetchPendingRfcs();
+      window.dispatchEvent(new Event('refreshNotifications'));
+      setRejectingRfcId(null);
     } catch (error) {
       console.error('Failed to reject', error);
     } finally {
@@ -193,11 +213,21 @@ export default function RfcApprovalPage() {
     
     {/* Activity Log Dropdown/Modal trigger could be added here if we had detailed history. For now, showing 'To' approver is the log. */}
     
+  <Link href={`/rfc/${rfc.id}`}>
+    <Button 
+      size="sm" 
+      variant="outline" 
+      className="h-8 px-2"
+    >
+      <Eye className="w-4 h-4 mr-1" /> Details
+    </Button>
+  </Link>
+
   <Button 
   size="sm" 
   variant="outline" 
   className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 px-2"
-  onClick={() => handleReject(rfc.id)}
+  onClick={() => setRejectingRfcId(rfc.id)}
   disabled={processingId === rfc.id}
   >
   <XCircle className="w-4 h-4 mr-1" /> Reject
@@ -270,6 +300,25 @@ export default function RfcApprovalPage() {
             <Button onClick={handleApprove} disabled={!!processingId} className="bg-green-600 hover:bg-green-700 text-white">
               {processingId ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
               Confirm Approval
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!rejectingRfcId} onOpenChange={(open) => !open && setRejectingRfcId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject RFC</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to reject this Request for Consumption? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectingRfcId(null)} disabled={!!processingId}>
+              Cancel
+            </Button>
+            <Button onClick={handleReject} disabled={!!processingId} variant="destructive">
+              {processingId ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <XCircle className="w-4 h-4 mr-2" />}
+              Yes, Reject
             </Button>
           </DialogFooter>
         </DialogContent>

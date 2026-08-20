@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import api from '@/lib/api';
 import {
   Bell,
   Search,
@@ -27,23 +28,34 @@ import { Badge } from '@/components/ui/badge';
 export default function TopBar() {
   const { user, logout } = useAuth();
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [hasUnread, setHasUnread] = useState(false);
 
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const res = await fetch('/api/dashboard/notifications');
-        if (res.ok) {
-          const data = await res.json();
-          setNotifications(data || []);
-        }
+        const res = await api.get('/api/dashboard/notifications');
+        const data = res.data || [];
+        setNotifications(data);
+        if (data.length > 0) setHasUnread(true);
       } catch (e) {
         console.error('Error fetching notifications:', e);
       }
     };
+
     if (user) {
       fetchNotifications();
+      
+      const handleRefresh = () => fetchNotifications();
+      window.addEventListener('refreshNotifications', handleRefresh);
+      return () => window.removeEventListener('refreshNotifications', handleRefresh);
     }
   }, [user]);
+
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      setHasUnread(false);
+    }
+  };
 
   const getRoleLabel = (role: string) => {
     return role.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
@@ -71,11 +83,11 @@ export default function TopBar() {
       </div>
 
       <div className="flex items-center gap-4">
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={handleOpenChange}>
           <DropdownMenuTrigger render={
             <Button variant="ghost" size="icon" className="relative cursor-pointer hover:bg-muted/50">
               <Bell className="w-5 h-5 text-muted-foreground" />
-              {notifications.length > 0 && (
+              {hasUnread && (
                 <div className="absolute right-2 top-2 w-2 h-2 bg-destructive rounded-full" />
               )}
             </Button>

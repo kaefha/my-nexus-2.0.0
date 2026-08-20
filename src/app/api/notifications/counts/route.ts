@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const client = await pool.connect();
     
     const role = user.role?.toUpperCase();
-    const userId = user.id;
+    const userId = user.sub || user.id;
 
     // 1. Count pending RFC approvals
     let rfcApprovals = 0;
@@ -62,6 +62,7 @@ export async function GET(req: NextRequest) {
     }
 
     client.release();
+    console.log("Counts returned for user:", user.name, "Role:", role, "Counts:", { rfcApprovals, poApprovals, materialReceives });
 
     return NextResponse.json({
       data: {

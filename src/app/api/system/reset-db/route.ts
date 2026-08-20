@@ -126,6 +126,9 @@ export async function GET() {
       ALTER TABLE projects ADD COLUMN IF NOT EXISTS project_type VARCHAR(50) DEFAULT 'INTERNAL';
       ALTER TABLE projects ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(20);
       ALTER TABLE projects ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';
+      ALTER TABLE rfcs ADD COLUMN IF NOT EXISTS request_date TIMESTAMP;
+      ALTER TABLE rfcs ADD COLUMN IF NOT EXISTS site_approver_id UUID;
+      ALTER TABLE rfcs ADD COLUMN IF NOT EXISTS finance_approver_id UUID;
     `;
     
     await client.query(sql);

@@ -39,7 +39,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const rfc = rfcRes.rows[0];
     
     const itemsRes = await pool.query(`
-      SELECT ri.id, ri.material_id as "materialId", ri.request_qty as "requestQty", ri.notes, m.material_name as "materialName", m.material_code as "materialCode", m.unit
+      SELECT ri.id, ri.material_id as "materialId", ri.request_qty as "requestQty", ri.notes, m.material_name as "materialName", m.material_code as "materialCode", m.unit, m.unit_price as "unitPrice"
       FROM rfc_items ri
       LEFT JOIN material_masters m ON ri.material_id = m.id
       WHERE ri.rfc_id = $1

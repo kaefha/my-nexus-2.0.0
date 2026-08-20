@@ -2,12 +2,12 @@
 
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, MapPin, Calendar, FileText, Printer, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, MapPin, Calendar, FileText, Printer, CheckCircle, XCircle, Banknote } from 'lucide-react';
 import api from '@/lib/api';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { toast } from 'sonner';
 
 export default function RfcDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -42,6 +42,12 @@ export default function RfcDetailPage({ params }: { params: Promise<{ id: string
     );
   }
 
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val || 0);
+  };
+
+  const grandTotal = rfc?.items?.reduce((sum: number, item: any) => sum + ((parseFloat(item.requestQty) || 0) * (parseFloat(item.unitPrice) || 0)), 0) || 0;
+
   if (!rfc) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
@@ -54,24 +60,28 @@ export default function RfcDetailPage({ params }: { params: Promise<{ id: string
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0">
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
-            {rfc.rfcNumber}
-            <StatusBadge status={rfc.status} />
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Detailed view of Request for Consumption</p>
+      <div className="flex flex-col md:flex-row md:items-center gap-4">
+        <div className="flex items-start md:items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0 mt-1 md:mt-0">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <span className="break-all">{rfc.rfcNumber}</span>
+              <div className="inline-block w-fit">
+                <StatusBadge status={rfc.status} />
+              </div>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">Detailed view of Request for Consumption</p>
+          </div>
         </div>
-        <div className="ml-auto flex gap-2">
+        <div className="flex flex-wrap gap-2 md:ml-auto pl-12 md:pl-0">
           {rfc.signedDocument && (
-            <Button variant="outline" onClick={() => window.open(rfc.signedDocument, '_blank')}>
+            <Button variant="outline" size="sm" className="sm:size-default" onClick={() => window.open(rfc.signedDocument, '_blank')}>
               <FileText className="w-4 h-4 mr-2" /> Signed Doc
             </Button>
           )}
-          <Button variant="default" onClick={() => window.open(`/print/rfc/${rfc.id}`, '_blank')}>
+          <Button variant="default" size="sm" className="sm:size-default" onClick={() => window.open(`/print/rfc/${rfc.id}`, '_blank')}>
             <Printer className="w-4 h-4 mr-2" /> Print PDF
           </Button>
         </div>
@@ -126,18 +136,39 @@ export default function RfcDetailPage({ params }: { params: Promise<{ id: string
       </div>
 
       {rfc.notes && (
-        <Card>
-          <CardHeader className="py-4">
-            <CardTitle className="text-sm">Additional Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-foreground bg-muted/30 p-3 rounded-md">{rfc.notes}</p>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-start gap-[3.6px] rounded-[14.4px] bg-[#FFF] shadow-[0_0_0_1px_rgba(10,10,10,0.10)] p-4 w-full max-w-[922px]">
+          <div className="text-sm font-medium">Additional Notes</div>
+          <div className="text-sm text-foreground flex flex-col items-start self-stretch p-[10.8px] rounded-[7.2px] bg-[rgba(245,245,245,0.30)]">
+            {rfc.notes}
+          </div>
+        </div>
       )}
 
-      <Card>
-        <CardHeader>
+      {grandTotal > 0 && (
+        <div className="flex flex-col justify-center items-start w-full max-w-[922px] h-[87px] py-[14.4px] px-0 gap-[14.4px] rounded-[14.4px] border border-[#D6D6D6] bg-white">
+          <div className="w-full flex items-center justify-between px-[14.4px] sm:px-[24px]">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-primary/10 rounded-full text-primary">
+                <Banknote className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Estimated Grand Total</p>
+                <h3 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+                  {formatCurrency(grandTotal)}
+                </h3>
+              </div>
+            </div>
+            <div className="hidden sm:block text-right">
+              <p className="text-xs text-muted-foreground max-w-[200px]">
+                Estimated total based on master material unit prices.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Card className="border-0 shadow-none ring-0 bg-transparent">
+        <CardHeader className="px-0">
           <CardTitle className="text-lg flex items-center justify-between">
             <span>Requested Items</span>
             <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
@@ -153,30 +184,52 @@ export default function RfcDetailPage({ params }: { params: Promise<{ id: string
                 <TableHead>Material Name</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
                 <TableHead>Unit</TableHead>
+                <TableHead className="text-right">Est. Unit Price</TableHead>
+                <TableHead className="text-right">Est. Total</TableHead>
                 <TableHead className="pr-6">Notes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rfc.items && rfc.items.length > 0 ? (
-                rfc.items.map((item: any) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="pl-6 font-medium text-primary">{item.materialCode}</TableCell>
-                    <TableCell>{item.materialName}</TableCell>
-                    <TableCell className="text-right font-semibold">{item.requestQty}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.unit}</TableCell>
-                    <TableCell className="pr-6 text-muted-foreground text-sm max-w-[200px] truncate" title={item.notes}>
-                      {item.notes || '-'}
-                    </TableCell>
-                  </TableRow>
-                ))
+                rfc.items.map((item: any) => {
+                  const qty = parseFloat(item.requestQty) || 0;
+                  const price = parseFloat(item.unitPrice) || 0;
+                  const total = qty * price;
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="pl-6 font-medium text-primary">{item.materialCode}</TableCell>
+                      <TableCell>{item.materialName}</TableCell>
+                      <TableCell className="text-right font-semibold">{item.requestQty}</TableCell>
+                      <TableCell className="text-muted-foreground">{item.unit}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{price > 0 ? formatCurrency(price) : '-'}</TableCell>
+                      <TableCell className="text-right font-medium">{price > 0 ? formatCurrency(total) : '-'}</TableCell>
+                      <TableCell className="pr-6 text-muted-foreground text-sm max-w-[200px] truncate" title={item.notes}>
+                        {item.notes || '-'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No items requested in this RFC
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
+            {rfc.items && rfc.items.length > 0 && (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-right pl-6 font-bold">Estimated Grand Total</TableCell>
+                  <TableCell className="text-right font-bold text-primary">
+                    {formatCurrency(
+                      rfc.items.reduce((sum: number, item: any) => sum + ((parseFloat(item.requestQty) || 0) * (parseFloat(item.unitPrice) || 0)), 0)
+                    )}
+                  </TableCell>
+                  <TableCell className="pr-6"></TableCell>
+                </TableRow>
+              </TableFooter>
+            )}
           </Table>
         </CardContent>
       </Card>

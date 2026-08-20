@@ -3,6 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import api from '@/lib/api';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -254,15 +255,18 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
   React.useEffect(() => {
     const fetchCounts = async () => {
       try {
-        const res = await fetch('/api/notifications/counts');
-        const json = await res.json();
-        if (json.data) setCounts(json.data);
+        const res = await api.get('/api/notifications/counts');
+        if (res.data?.data) setCounts(res.data.data);
       } catch(e) {
         console.error("Failed to fetch notification counts", e);
       }
     };
     fetchCounts();
-  }, [pathname]); // Refetch on route change
+    
+    const handleRefresh = () => fetchCounts();
+    window.addEventListener('refreshNotifications', handleRefresh);
+    return () => window.removeEventListener('refreshNotifications', handleRefresh);
+  }, [pathname]); // Refetch on route change and events
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
