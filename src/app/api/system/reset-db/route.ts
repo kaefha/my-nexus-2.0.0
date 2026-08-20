@@ -62,6 +62,17 @@ export async function GET() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS rfc_items (
+        id UUID PRIMARY KEY,
+        rfc_id UUID REFERENCES rfcs(id) ON DELETE CASCADE,
+        material_id UUID REFERENCES material_masters(id) ON DELETE CASCADE,
+        request_qty INTEGER NOT NULL,
+        approved_qty INTEGER DEFAULT 0,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
       CREATE TABLE IF NOT EXISTS purchase_orders (
         id UUID PRIMARY KEY,
         po_number VARCHAR(100) UNIQUE NOT NULL,
@@ -73,6 +84,16 @@ export async function GET() {
         items_count INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS purchase_order_items (
+        id UUID PRIMARY KEY,
+        purchase_order_id UUID REFERENCES purchase_orders(id) ON DELETE CASCADE,
+        material_id UUID REFERENCES material_masters(id) ON DELETE CASCADE,
+        quantity INTEGER NOT NULL DEFAULT 1,
+        unit_price DECIMAL(15,2),
+        total_price DECIMAL(15,2),
+        notes TEXT
       );
 
       CREATE TABLE IF NOT EXISTS delivery_orders (
@@ -87,6 +108,14 @@ export async function GET() {
         status VARCHAR(50),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS delivery_order_items (
+        id UUID PRIMARY KEY,
+        delivery_order_id UUID REFERENCES delivery_orders(id) ON DELETE CASCADE,
+        material_id UUID,
+        quantity INTEGER,
+        notes TEXT
       );
 
       CREATE TABLE IF NOT EXISTS warehouses (
@@ -116,6 +145,16 @@ export async function GET() {
         transfer_date TIMESTAMP,
         reason TEXT,
         status VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS project_requirements (
+        id UUID PRIMARY KEY,
+        project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+        material_id UUID REFERENCES material_masters(id) ON DELETE CASCADE,
+        estimated_qty INTEGER NOT NULL DEFAULT 0,
+        notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
