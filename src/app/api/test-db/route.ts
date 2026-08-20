@@ -6,31 +6,23 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const client = await pool.connect();
   try {
-    const results: Record<string, string> = {};
+    const results: Record<string, any> = {};
     
-    const queries = [
-      { name: 'materials', sql: `SELECT COUNT(*) FROM material_masters WHERE is_active = true` },
-      { name: 'projects', sql: `SELECT COUNT(*) FROM projects WHERE status = 'ACTIVE'` },
-      { name: 'rfcs', sql: `SELECT COUNT(*) FROM rfcs WHERE status IN ('WAITING_SITE_APPROVAL', 'WAITING_FINANCE_APPROVAL', 'SUBMITTED')` },
-      { name: 'pos', sql: `SELECT COUNT(*) FROM purchase_orders WHERE status = 'ACTIVE'` },
-      { name: 'dos', sql: `SELECT COUNT(*) FROM delivery_orders WHERE status = 'SHIPPED'` },
-      { name: 'transfers', sql: `SELECT COUNT(*) FROM transfers WHERE status = 'PENDING'` },
-      { name: 'warehouses', sql: `SELECT COUNT(*) FROM warehouses WHERE status = 'ACTIVE'` },
-      { name: 'assetVal', sql: `
-        SELECT COALESCE(SUM(s.quantity * COALESCE(m.unit_price, 0)), 0) as total_asset_value
-        FROM inventory_stocks s
-        JOIN material_masters m ON s.material_id = m.id
-      `}
-    ];
-
-    for (const q of queries) {
-      try {
-        await client.query(q.sql);
-        results[q.name] = 'SUCCESS';
-      } catch (err: any) {
-        results[q.name] = 'ERROR: ' + err.message;
-      }
+    // Check columns in material_masters
+    try {
+      const colRes = await client.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'material_masters'
+      `);
+      results['columns'] = colRes.rows.map(r => r.column_name);
+    } catch (e: any) {
+      results['columns_error'] = e.message;
     }
+
+    // Check project URL
+    results['supabase_url'] = process.env.NEXT_PUBLIC_SUPABASE_URL || 'Not Set';
+    results['database_url_starts_with'] = process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 15) : 'Not Set';
     
     return NextResponse.json(results);
   } catch (error: any) {
