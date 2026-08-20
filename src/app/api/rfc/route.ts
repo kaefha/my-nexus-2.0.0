@@ -138,7 +138,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error('Error creating RFC:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ message: 'Internal server error', error: error.message || String(error) }, { status: 500 });
   } finally {
     client.release();
   }
