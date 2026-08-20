@@ -234,6 +234,9 @@ export default function RfcPage() {
         <MoreHorizontal className="h-4 w-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <DropdownMenuItem className="cursor-pointer" onClick={() => window.location.href = '/rfc/' + rfc.id}>
+          <Eye className="w-4 h-4 mr-2 text-primary" /> View Details
+        </DropdownMenuItem>
         {rfc.signedDocument ? (
           <DropdownMenuItem className="cursor-pointer" onClick={() => window.open(rfc.signedDocument, '_blank')}>
             <FileText className="w-4 h-4 mr-2" /> Signed Doc

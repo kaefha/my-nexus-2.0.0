@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
         SELECT id, rfc_number, created_at 
         FROM rfcs 
         WHERE status = 'WAITING_APPROVAL' 
-        AND (approval_destination IS NULL OR approval_destination = $1)
+        AND (site_approver_id IS NULL OR site_approver_id = $1)
         ORDER BY created_at DESC LIMIT 5
       `, [userId]);
       

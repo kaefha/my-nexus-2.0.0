@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
         SELECT COUNT(*) as count 
         FROM rfcs 
         WHERE status = 'WAITING_APPROVAL' 
-        AND (approval_destination IS NULL OR approval_destination = $1)
+        AND (site_approver_id IS NULL OR site_approver_id = $1)
       `, [userId]);
       rfcApprovals = parseInt(rfcRes.rows[0].count, 10);
     }
