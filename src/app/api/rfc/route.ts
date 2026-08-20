@@ -65,7 +65,7 @@ export async function GET(request: Request) {
       requestorId: row.requestor_id,
       location: row.location,
       status: row.status,
-      approvalDestination: row.approval_destination,
+      approvalDestination: row.site_approver_id,
       notes: row.notes,
       requestDocument: row.request_document,
       signedDocument: row.signed_document,

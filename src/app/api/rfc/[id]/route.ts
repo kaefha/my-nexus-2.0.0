@@ -49,7 +49,10 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       ...rfc,
       project: { projectName: rfc.projectName },
       requestor: { name: rfc.requestorName, role: rfc.requestorRole },
-      approvalDestinationUser: { name: rfc.approverName, role: rfc.approverRole },
+      approvalDestinationUser: { 
+        name: rfc.siteApproverName || rfc.financeApproverName, 
+        role: rfc.siteApproverName ? 'Site Approver' : 'Finance Approver' 
+      },
       siteApproverName: rfc.siteApproverName,
       financeApproverName: rfc.financeApproverName,
       items: itemsRes.rows
