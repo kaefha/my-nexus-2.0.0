@@ -109,6 +109,7 @@ export async function GET() {
         shipping_date TIMESTAMP,
         notes TEXT,
         status VARCHAR(50),
+        evidence TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );

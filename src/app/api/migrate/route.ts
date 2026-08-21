@@ -25,6 +25,9 @@ export async function GET() {
     if (!cols.includes('origin_lng')) {
       await client.query('ALTER TABLE delivery_orders ADD COLUMN origin_lng NUMERIC(11, 8)');
     }
+    if (!cols.includes('evidence')) {
+      await client.query('ALTER TABLE delivery_orders ADD COLUMN evidence TEXT');
+    }
 
     await client.query('COMMIT');
     return NextResponse.json({ message: 'Migration successful!' });
