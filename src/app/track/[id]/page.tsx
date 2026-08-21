@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import api from '@/lib/api';
 import { useParams } from 'next/navigation';
 import { compressImage } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function DriverTrackingPage() {
   const params = useParams();
@@ -102,12 +103,15 @@ export default function DriverTrackingPage() {
         status: 'DELIVERED',
         evidence: evidenceBase64
       });
+      toast.success('Bukti pengantaran berhasil diupload!');
       setStatus('completed');
       stopTracking();
     } catch (error: any) {
       console.error('Failed to submit evidence', error);
       setStatus('error');
-      setErrorMsg(error.response?.data?.message || 'Failed to submit evidence');
+      const errorMsg = error.response?.data?.message || 'Failed to submit evidence';
+      setErrorMsg(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setIsSubmittingEvidence(false);
     }
