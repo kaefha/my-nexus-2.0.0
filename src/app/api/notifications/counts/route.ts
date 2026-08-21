@@ -30,27 +30,18 @@ export async function GET(req: NextRequest) {
 
     // 2. Count pending POs
     let poApprovals = 0;
-    let targetPoStatuses: string[] = [];
-    if (['PROJECT_MANAGER', 'SITE_MANAGER'].includes(role)) {
-      targetPoStatuses = ['WAITING_OPERATION_APPROVAL'];
-    } else if (['ADMIN'].includes(role)) {
-      targetPoStatuses = ['WAITING_ADMIN_APPROVAL'];
-    } else if (['OWNER', 'PROCUREMENT', 'SUPER_ADMIN'].includes(role)) {
-      targetPoStatuses = ['WAITING_OWNER_APPROVAL'];
-    }
-
-    if (targetPoStatuses.length > 0) {
-      const statusPlaceholders = targetPoStatuses.map((_, i) => `$${i + 1}`).join(',');
+    if (['PROCUREMENT', 'OWNER', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
       const poRes = await client.query(`
         SELECT COUNT(*) as count 
         FROM purchase_orders 
-        WHERE status IN (${statusPlaceholders})
-      `, targetPoStatuses);
+        WHERE status = 'WAITING_APPROVAL' 
+        AND (approver_id IS NULL OR approver_id = $1)
+      `, [userId]);
       poApprovals = parseInt(poRes.rows[0].count, 10);
     }
 
     // 3. Count ready Material Receives (DOs that are shipping or waiting to be received)
-    // For Procurement, Owner, Site Manager, Project Manager
+    // For Procurement, Owner, Site Manager, Project Manager, Admin, Super Admin
     let materialReceives = 0;
     if (['PROCUREMENT', 'OWNER', 'SITE_MANAGER', 'PROJECT_MANAGER', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
       const doRes = await client.query(`
@@ -61,14 +52,25 @@ export async function GET(req: NextRequest) {
       materialReceives = parseInt(doRes.rows[0].count, 10);
     }
 
+    // 4. Count pending Logistics (Approved POs waiting to be processed into DOs)
+    let pendingLogistics = 0;
+    // Anyone who has access to logistics (all roles technically, but mostly ADMIN, PROCUREMENT, OWNER, SUPER_ADMIN)
+    const pendingLogisticsRes = await client.query(`
+      SELECT COUNT(*) as count
+      FROM purchase_orders
+      WHERE status = 'APPROVED'
+    `);
+    pendingLogistics = parseInt(pendingLogisticsRes.rows[0].count, 10);
+
     client.release();
-    console.log("Counts returned for user:", user.name, "Role:", role, "Counts:", { rfcApprovals, poApprovals, materialReceives });
+    console.log("Counts returned for user:", user.name, "Role:", role, "Counts:", { rfcApprovals, poApprovals, materialReceives, pendingLogistics });
 
     return NextResponse.json({
       data: {
         rfcApprovals,
         poApprovals,
-        materialReceives
+        materialReceives,
+        pendingLogistics
       }
     }, { status: 200 });
   } catch (error: any) {

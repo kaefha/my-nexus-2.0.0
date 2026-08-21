@@ -80,6 +80,7 @@ const groupedNavigation = [
         icon: ShoppingCart,
         children: [
           { label: 'Active POs', href: '/procurement' },
+          { label: 'Approval Queue', href: '/procurement/approval' },
           { label: 'PO History', href: '/procurement/history' },
         ],
       },
@@ -151,14 +152,17 @@ function NavCollapsible({ item, pathname, counts }: { item: any, pathname: strin
     if (isItemActive) setOpen(true);
   }, [isItemActive]);
 
-  const getBadgeForLabel = (label: string) => {
-    if (label === 'Approval Queue' && counts.rfcApprovals > 0) {
+  const getBadgeForLabel = (childLabel: string, parentLabel: string) => {
+    if (childLabel === 'Approval Queue' && parentLabel === 'RFC Management' && counts.rfcApprovals > 0) {
       return <Badge variant="destructive" className="ml-auto h-5 px-1.5 flex items-center justify-center text-[10px]">{counts.rfcApprovals}</Badge>;
     }
-    if (label === 'Active POs' && counts.poApprovals > 0) {
+    if (childLabel === 'Approval Queue' && parentLabel === 'Procurement' && counts.poApprovals > 0) {
       return <Badge variant="destructive" className="ml-auto h-5 px-1.5 flex items-center justify-center text-[10px]">{counts.poApprovals}</Badge>;
     }
-    if (label === 'Material Receive' && counts.materialReceives > 0) {
+    if (childLabel === 'Delivery Tracking' && counts.pendingLogistics > 0) {
+      return <Badge variant="destructive" className="ml-auto h-5 px-1.5 flex items-center justify-center text-[10px]">{counts.pendingLogistics}</Badge>;
+    }
+    if (childLabel === 'Material Receive' && counts.materialReceives > 0) {
       return <Badge variant="destructive" className="ml-auto h-5 px-1.5 flex items-center justify-center text-[10px]">{counts.materialReceives}</Badge>;
     }
     return null;
@@ -168,6 +172,7 @@ function NavCollapsible({ item, pathname, counts }: { item: any, pathname: strin
   const groupHasNotification = () => {
     if (item.label === 'RFC Management' && counts.rfcApprovals > 0) return true;
     if (item.label === 'Procurement' && counts.poApprovals > 0) return true;
+    if (item.label === 'Logistics' && counts.pendingLogistics > 0) return true;
     if (item.label === 'Warehouse' && counts.materialReceives > 0) return true;
     return false;
   };
@@ -200,7 +205,7 @@ function NavCollapsible({ item, pathname, counts }: { item: any, pathname: strin
                   render={<Link href={child.href} />}
                 >
                   <span>{child.label}</span>
-                  {getBadgeForLabel(child.label)}
+                  {getBadgeForLabel(child.label, item.label)}
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             ))}
@@ -214,7 +219,7 @@ function NavCollapsible({ item, pathname, counts }: { item: any, pathname: strin
 export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { user } = useAuth();
-  const [counts, setCounts] = React.useState({ rfcApprovals: 0, poApprovals: 0, materialReceives: 0 });
+  const [counts, setCounts] = React.useState({ rfcApprovals: 0, poApprovals: 0, materialReceives: 0, pendingLogistics: 0 });
 
   const filteredNavigation = groupedNavigation.map(group => {
     let filteredItems = group.items;
