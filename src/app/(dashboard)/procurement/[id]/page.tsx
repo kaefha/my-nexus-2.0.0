@@ -231,6 +231,12 @@ export default function PoDetailPage({ params }: { params: Promise<{ id: string 
               </CardContent>
             </Card>
           )}
+          {po.status === 'APPROVED' && isProcurement && (
+            <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" onClick={() => updatePOStatus('PROCESSED')}>
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Mark as Processed
+            </Button>
+          )}
           {po.status === 'DRAFT' && isProcurement && (
             <Button className="w-full bg-amber-600 hover:bg-amber-700" onClick={() => updatePOStatus('WAITING_APPROVAL')}>
               <Send className="w-4 h-4 mr-2" />

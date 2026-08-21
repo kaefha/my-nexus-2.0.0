@@ -52,13 +52,13 @@ export async function GET(req: NextRequest) {
       materialReceives = parseInt(doRes.rows[0].count, 10);
     }
 
-    // 4. Count pending Logistics (Approved POs waiting to be processed into DOs)
+    // 4. Count pending Logistics (Processed POs waiting to be made into DOs)
     let pendingLogistics = 0;
     // Anyone who has access to logistics (all roles technically, but mostly ADMIN, PROCUREMENT, OWNER, SUPER_ADMIN)
     const pendingLogisticsRes = await client.query(`
       SELECT COUNT(*) as count
       FROM purchase_orders
-      WHERE status = 'APPROVED'
+      WHERE status = 'PROCESSED'
     `);
     pendingLogistics = parseInt(pendingLogisticsRes.rows[0].count, 10);
 
