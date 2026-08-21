@@ -433,7 +433,7 @@ export default function VendorsPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="vendorCode">Vendor Code *</Label>
                   <Input 
                     id="vendorCode" 
@@ -443,7 +443,7 @@ export default function VendorsPage() {
                     required 
                   />
                 </div>
-                <div className="grid gap-2">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="name">Vendor Name *</Label>
                   <Input 
                     id="name" 
@@ -454,7 +454,7 @@ export default function VendorsPage() {
                   />
                 </div>
               </div>
-              <div className="grid gap-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="contactPerson">Contact Person</Label>
                 <Input 
                   id="contactPerson" 
@@ -464,7 +464,7 @@ export default function VendorsPage() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="email">Email Address</Label>
                   <Input 
                     id="email" 
@@ -474,7 +474,7 @@ export default function VendorsPage() {
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                   />
                 </div>
-                <div className="grid gap-2">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="phone">Phone Number</Label>
                   <Input 
                     id="phone" 
@@ -484,7 +484,7 @@ export default function VendorsPage() {
                   />
                 </div>
               </div>
-              <div className="grid gap-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="address">Address</Label>
                 <Textarea 
                   id="address" 
@@ -494,7 +494,7 @@ export default function VendorsPage() {
                 />
               </div>
               {editId && (
-                <div className="grid gap-2">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="status">Status</Label>
                   <Select value={formData.isActive ? "ACTIVE" : "INACTIVE"} onValueChange={(val) => setFormData({...formData, isActive: val === "ACTIVE"})}>
                     <SelectTrigger>

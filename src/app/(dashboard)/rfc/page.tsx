@@ -290,7 +290,7 @@ export default function RfcPage() {
         </DialogDescription>
       </DialogHeader>
       <div className="grid gap-4 py-4">
-        <div className="grid gap-2">
+        <div className="flex flex-col gap-2">
           <Label htmlFor="location">Location *</Label>
           <Input 
             id="location" 
@@ -299,7 +299,7 @@ export default function RfcPage() {
             required 
           />
         </div>
-        <div className="grid gap-2">
+        <div className="flex flex-col gap-2">
           <Label htmlFor="notes">Notes</Label>
           <Input 
             id="notes" 

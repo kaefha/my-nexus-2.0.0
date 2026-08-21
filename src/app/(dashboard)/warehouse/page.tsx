@@ -335,7 +335,7 @@ export default function WarehouseOperationsPage() {
                   </Select>
                 </div>
 
-                <div className="grid gap-2">
+                <div className="flex flex-col gap-2">
                   <Label>Delivery Order Number</Label>
                   <Input 
                     placeholder="e.g. DO-2026-XYZ (Optional)" 
@@ -344,7 +344,7 @@ export default function WarehouseOperationsPage() {
                   />
                 </div>
 
-                <div className="grid gap-2">
+                <div className="flex flex-col gap-2">
                   <Label>Photo Evidence</Label>
                   <Input 
                     type="file"

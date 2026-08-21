@@ -32,7 +32,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="grid gap-2">
+            <div className="flex flex-col gap-2">
               <Label>Theme</Label>
               <div className="flex flex-wrap gap-4">
                 <Button 

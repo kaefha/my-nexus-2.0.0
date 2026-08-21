@@ -189,7 +189,7 @@ export default function TransferPage() {
  <DialogDescription>Create a new stock transfer request.</DialogDescription>
  </DialogHeader>
  <div className="grid gap-4 py-4">
- <div className="grid gap-2">
+ <div className="flex flex-col gap-2">
  <Label htmlFor="transferNumber">Transfer Number *</Label>
  <Input 
  id="transferNumber" 
@@ -200,7 +200,7 @@ export default function TransferPage() {
  />
  </div>
  <div className="grid grid-cols-2 gap-4">
- <div className="grid gap-2">
+ <div className="flex flex-col gap-2">
  <Label htmlFor="fromLocation">From Location *</Label>
  <Select value={formData.fromLocation} onValueChange={(val) => setFormData({ ...formData, fromLocation: val || "" })} required>
  <SelectTrigger>
@@ -213,7 +213,7 @@ export default function TransferPage() {
  </SelectContent>
  </Select>
  </div>
- <div className="grid gap-2">
+ <div className="flex flex-col gap-2">
  <Label htmlFor="toLocation">To Location *</Label>
  {!isManualTo ? (
  <Select 
@@ -257,14 +257,14 @@ export default function TransferPage() {
  </div>
  </div>
  <div className="grid grid-cols-2 gap-4">
- <div className="grid gap-2">
+ <div className="flex flex-col gap-2">
  <Label htmlFor="transferDate">Transfer Date</Label>
  <DatePicker 
  value={formData.transferDate}
  onChange={(value) => setFormData({...formData, transferDate: value})}
  />
  </div>
- <div className="grid gap-2">
+ <div className="flex flex-col gap-2">
  <Label htmlFor="pic">PIC</Label>
  <Input 
  id="pic" 
@@ -274,7 +274,7 @@ export default function TransferPage() {
  />
  </div>
  </div>
- <div className="grid gap-2">
+ <div className="flex flex-col gap-2">
  <Label htmlFor="reason">Reason / Notes</Label>
  <Input 
  id="reason" 

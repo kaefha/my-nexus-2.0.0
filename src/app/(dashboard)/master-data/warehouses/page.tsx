@@ -504,7 +504,7 @@ export default function WarehousePage() {
               <DialogDescription>{editId ? 'Update warehouse details.' : 'Add a new warehouse location.'}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="code">Warehouse Code *</Label>
                 <Input 
                   id="code" 
@@ -514,7 +514,7 @@ export default function WarehousePage() {
                   required 
                 />
               </div>
-              <div className="grid gap-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="name">Warehouse Name *</Label>
                 <Input 
                   id="name" 
@@ -524,7 +524,7 @@ export default function WarehousePage() {
                   required 
                 />
               </div>
-              <div className="grid gap-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="location">Location / Address</Label>
                 <Input 
                   id="location" 
@@ -533,7 +533,7 @@ export default function WarehousePage() {
                   onChange={(e) => setFormData({...formData, location: e.target.value})}
                 />
               </div>
-              <div className="grid gap-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="coordinates">Coordinates (Lat, Long)</Label>
                 <Input 
                   id="coordinates" 
@@ -580,7 +580,7 @@ export default function WarehousePage() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="type">Type</Label>
                   <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val || "" })}>
                     <SelectTrigger>
@@ -593,7 +593,7 @@ export default function WarehousePage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-2">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="capacity">Capacity (CBM)</Label>
                   <Input 
                     id="capacity" 
@@ -605,7 +605,7 @@ export default function WarehousePage() {
                 </div>
               </div>
               {editId && (
-                <div className="grid gap-2">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="status">Status</Label>
                   <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val || "" })}>
                     <SelectTrigger>

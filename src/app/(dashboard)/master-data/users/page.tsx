@@ -391,7 +391,7 @@ export default function UsersPage() {
               <DialogDescription>{editId ? 'Update user details.' : 'Register a new user to the system.'}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="name">Full Name *</Label>
                 <Input 
                   id="name" 
@@ -401,7 +401,7 @@ export default function UsersPage() {
                   required 
                 />
               </div>
-              <div className="grid gap-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="email">Email Address *</Label>
                 <Input 
                   id="email" 
@@ -413,7 +413,7 @@ export default function UsersPage() {
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="role">System Role</Label>
                   <Select value={formData.role} onValueChange={(val) => setFormData({ ...formData, role: val || "" })}>
                     <SelectTrigger>
@@ -430,7 +430,7 @@ export default function UsersPage() {
                   </Select>
                 </div>
                 {editId && (
-                  <div className="grid gap-2">
+                  <div className="flex flex-col gap-2">
                     <Label htmlFor="status">Status</Label>
                     <Select value={formData.isActive ? "ACTIVE" : "INACTIVE"} onValueChange={(val) => setFormData({...formData, isActive: val === "ACTIVE"})}>
                       <SelectTrigger>
