@@ -6,8 +6,12 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const client = await pool.connect();
   try {
-    const res = await client.query('SELECT po_number, status, approver_id FROM purchase_orders ORDER BY created_at DESC LIMIT 20');
-    return NextResponse.json({ pos: res.rows });
+    const res = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'delivery_orders'
+    `);
+    return NextResponse.json({ columns: res.rows.map(r => r.column_name) });
   } catch (error: any) {
     return NextResponse.json({ error: error.message });
   } finally {
