@@ -33,7 +33,7 @@ export async function POST(request: Request) {
         
       if (error) {
         console.error('Supabase upload error:', error);
-        throw new Error('Supabase upload failed');
+        throw new Error(`Supabase upload failed: ${error.message || JSON.stringify(error)}`);
       }
       
       const { data: publicUrlData } = supabase.storage
@@ -59,8 +59,8 @@ export async function POST(request: Request) {
       url: fileUrl
     }, { status: 200 });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading file:', error);
-    return NextResponse.json({ message: 'Failed to upload file' }, { status: 500 });
+    return NextResponse.json({ message: 'Failed to upload file', error: error.message || String(error) }, { status: 500 });
   }
 }
