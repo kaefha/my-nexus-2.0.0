@@ -168,6 +168,13 @@ export async function GET() {
       ALTER TABLE rfcs ADD COLUMN IF NOT EXISTS request_date TIMESTAMP;
       ALTER TABLE rfcs ADD COLUMN IF NOT EXISTS site_approver_id UUID;
       ALTER TABLE rfcs ADD COLUMN IF NOT EXISTS finance_approver_id UUID;
+      
+      -- PO missing columns
+      ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS transporter VARCHAR(255);
+      ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS driver_name VARCHAR(255);
+      ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS vehicle_number VARCHAR(100);
+      ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS deliver_to VARCHAR(500);
+      ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS signed_document_url VARCHAR(500);
     `;
     
     await client.query(sql);
