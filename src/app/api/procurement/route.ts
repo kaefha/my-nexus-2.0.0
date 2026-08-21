@@ -52,12 +52,12 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+  export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { poNumber, vendor, rfcId, expectedDate, notes, items, transporter, driverName, vehicleNumber, deliverTo } = body;
+    const { poNumber, vendor, rfcId, expectedDate, notes, items, transporter, driverName, vehicleNumber, deliverTo, approverId } = body;
 
-    if (!poNumber || !vendor) {
+    if (!poNumber || !vendor || !approverId) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
     }
 
@@ -70,13 +70,13 @@ export async function POST(request: Request) {
       const res = await client.query(`
         INSERT INTO purchase_orders (
           id, po_number, vendor, rfc_id, expected_date, notes, status, items_count,
-          transporter, driver_name, vehicle_number, deliver_to
+          transporter, driver_name, vehicle_number, deliver_to, approver_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING *
       `, [
-        id, poNumber, vendor, rfcId || null, expectedDate ? new Date(expectedDate) : null, notes || '', 'DRAFT', items?.length || 0,
-        transporter || null, driverName || null, vehicleNumber || null, deliverTo || null
+        id, poNumber, vendor, rfcId || null, expectedDate ? new Date(expectedDate) : null, notes || '', 'WAITING_APPROVAL', items?.length || 0,
+        transporter || null, driverName || null, vehicleNumber || null, deliverTo || null, approverId
       ]);
 
       if (items && items.length > 0) {

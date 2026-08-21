@@ -24,6 +24,7 @@ export default function CreatePOPage() {
 
   const [approvedRfcs, setApprovedRfcs] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     poNumber: '',
@@ -35,6 +36,7 @@ export default function CreatePOPage() {
     driverName: '',
     vehicleNumber: '',
     deliverTo: '',
+    approverId: '',
     items: [] as any[]
   });
 
@@ -44,18 +46,23 @@ export default function CreatePOPage() {
   const [rfcSearch, setRfcSearch] = useState('');
   const [rfcPopoverOpen, setRfcPopoverOpen] = useState(false);
 
+  const [approverSearch, setApproverSearch] = useState('');
+  const [approverPopoverOpen, setApproverPopoverOpen] = useState(false);
+
   useEffect(() => {
     fetchInitialData();
   }, []);
 
   const fetchInitialData = async () => {
     try {
-      const [rfcRes, vendorRes] = await Promise.all([
+      const [rfcRes, vendorRes, usersRes] = await Promise.all([
         api.get('/api/rfc?status=APPROVED'),
-        api.get('/api/vendors')
+        api.get('/api/vendors'),
+        api.get('/api/users')
       ]);
       setApprovedRfcs(rfcRes.data.data || []);
       setVendors(vendorRes.data.data || []);
+      setUsers(usersRes.data.data || []);
       
       if (editId) {
         const { data } = await api.get(`/api/procurement/${editId}`);
@@ -70,6 +77,7 @@ export default function CreatePOPage() {
           driverName: po.driverName || '',
           vehicleNumber: po.vehicleNumber || '',
           deliverTo: po.deliverTo || '',
+          approverId: po.approverId || '',
           items: po.items || []
         });
       }
@@ -285,6 +293,59 @@ export default function CreatePOPage() {
                   onChange={(value) => setFormData({...formData, expectedDate: value})}
                   className="w-full"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="approverId">Approval Destination <span className="text-destructive">*</span></Label>
+                <Popover open={approverPopoverOpen} onOpenChange={setApproverPopoverOpen}>
+                  <PopoverTrigger
+                      className="flex min-h-10 h-auto w-full max-w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <span className="text-left flex-1 pr-2 break-words whitespace-normal">
+                      {formData.approverId
+                        ? (() => {
+                            const u = users.find((u) => u.id === formData.approverId);
+                            return u ? `${u.name} (${u.role})` : "Select approver...";
+                          })()
+                        : "Select approver..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-(--anchor-width) min-w-[300px] p-0" align="start">
+                    <div className="flex items-center border-b px-3">
+                      <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                      <Input
+                        placeholder="Search approver..."
+                        className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-0"
+                        value={approverSearch}
+                        onChange={(e) => setApproverSearch(e.target.value)}
+                      />
+                    </div>
+                    <div className="max-h-[300px] overflow-y-auto p-1">
+                      {users.filter(u => u.name.toLowerCase().includes(approverSearch.toLowerCase())).length === 0 ? (
+                        <div className="py-6 text-center text-sm text-muted-foreground">No approver found.</div>
+                      ) : (
+                        users.filter(u => u.name.toLowerCase().includes(approverSearch.toLowerCase())).map(u => (
+                          <div
+                            key={u.id}
+                            className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground ${formData.approverId === u.id ? 'bg-accent text-accent-foreground' : ''}`}
+                            onClick={() => {
+                              setFormData({...formData, approverId: u.id});
+                              setApproverPopoverOpen(false);
+                            }}
+                          >
+                            {formData.approverId === u.id && (
+                              <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+                                <Check className="h-4 w-4" />
+                              </span>
+                            )}
+                            {u.name} ({u.role})
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2 md:col-span-2">

@@ -204,7 +204,9 @@ export default function PoDetailPage({ params }: { params: Promise<{ id: string 
               <CardContent className="p-4 flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Processed By</p>
+                  <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">
+                    {po.status === 'APPROVED' ? 'Approved By' : po.status === 'REJECTED' ? 'Rejected By' : 'Assigned Approver'}
+                  </p>
                   <p className="font-medium text-sm">
                     {po.approverName}
                   </p>
@@ -214,7 +216,7 @@ export default function PoDetailPage({ params }: { params: Promise<{ id: string 
             </Card>
           )}
 
-          {isProcurement && po.status === 'WAITING_APPROVAL' && (
+          {po.status === 'WAITING_APPROVAL' && user?.id === po.approverId && (
             <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Pending Action</CardTitle>

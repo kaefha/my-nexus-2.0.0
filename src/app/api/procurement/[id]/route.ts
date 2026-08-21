@@ -25,6 +25,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         po.deliver_to as "deliverTo",
         po.signed_document_url as "signedDocumentUrl",
         po.created_at as "createdAt",
+        po.approver_id as "approverId",
         u.name as "approverName",
         u.role as "approverRole"
       FROM purchase_orders po
@@ -62,12 +63,12 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   }
 }
 
-export async function PUT(request: Request, context: { params: Promise<{ id: string }> | { id: string } }) {
+  export async function PUT(request: Request, context: { params: Promise<{ id: string }> | { id: string } }) {
   try {
     const params = await context.params;
     const { id } = params;
     const body = await request.json();
-    const { poNumber, vendor, rfcId, expectedDate, notes, items, transporter, driverName, vehicleNumber, deliverTo } = body;
+    const { poNumber, vendor, rfcId, expectedDate, notes, items, transporter, driverName, vehicleNumber, deliverTo, approverId } = body;
 
     // Start transaction
     await pool.query('BEGIN');
@@ -85,8 +86,9 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         driver_name = $7,
         vehicle_number = $8,
         deliver_to = $9,
+        approver_id = $10,
         updated_at = NOW()
-      WHERE id = $10
+      WHERE id = $11
     `, [
       poNumber, 
       vendor, 
@@ -97,6 +99,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       driverName || null,
       vehicleNumber || null,
       deliverTo || null,
+      approverId || null,
       id
     ]);
 
