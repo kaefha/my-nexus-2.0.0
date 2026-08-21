@@ -319,13 +319,13 @@ export default function LogisticsPage() {
  </div>
 
  <Dialog open={isOpen} onOpenChange={setIsOpen}>
- <DialogContent>
+ <DialogContent className="sm:max-w-4xl w-[95vw] overflow-y-auto max-h-[90vh]">
  <form onSubmit={handleSubmit}>
  <DialogHeader>
  <DialogTitle>{editId ? 'Edit Delivery Order' : 'New Delivery Order'}</DialogTitle>
  <DialogDescription>{editId ? 'Update delivery order details.' : 'Create a new delivery order to track shipment.'}</DialogDescription>
  </DialogHeader>
- <div className="grid gap-4 py-4">
+ <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 py-4">
  <div className="grid gap-2">
  <Label htmlFor="doNumber">DO Number *</Label>
  <Input 
@@ -430,7 +430,7 @@ export default function LogisticsPage() {
  onChange={(value) => setFormData({...formData, shippingDate: value})}
  />
  </div>
- <div className="grid gap-2">
+ <div className="grid gap-2 md:col-span-2">
  <Label htmlFor="notes">Notes</Label>
  <Input 
  id="notes" 
