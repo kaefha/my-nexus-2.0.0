@@ -175,6 +175,7 @@ export async function GET() {
       ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS vehicle_number VARCHAR(100);
       ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS deliver_to VARCHAR(500);
       ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS signed_document_url VARCHAR(500);
+      ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS approver_id UUID;
     `;
     
     await client.query(sql);
