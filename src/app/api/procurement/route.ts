@@ -8,17 +8,24 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
     const type = searchParams.get('type');
+    const status = searchParams.get('status');
 
     let queryStr = 'SELECT * FROM purchase_orders';
     const queryParams: any[] = [];
     const conditions = [];
+    let paramIndex = 1;
 
     if (search) {
-      conditions.push(`(LOWER(po_number) LIKE $1 OR LOWER(vendor) LIKE $1)`);
+      conditions.push(`(LOWER(po_number) LIKE $${paramIndex} OR LOWER(vendor) LIKE $${paramIndex})`);
       queryParams.push(`%${search.toLowerCase()}%`);
+      paramIndex++;
     }
 
-    if (type === 'active') {
+    if (status) {
+      conditions.push(`status = $${paramIndex}`);
+      queryParams.push(status);
+      paramIndex++;
+    } else if (type === 'active') {
       conditions.push(`status IN ('DRAFT', 'WAITING_APPROVAL', 'WAITING_OPERATION_APPROVAL', 'WAITING_ADMIN_APPROVAL', 'WAITING_OWNER_APPROVAL')`);
     } else if (type === 'history') {
       conditions.push(`status IN ('APPROVED', 'REJECTED', 'PROCESSED', 'SHIPPED', 'DELIVERED', 'COMPLETED')`);
