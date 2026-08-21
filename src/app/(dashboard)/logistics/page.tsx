@@ -326,7 +326,7 @@ export default function LogisticsPage() {
  <DialogDescription>{editId ? 'Update delivery order details.' : 'Create a new delivery order to track shipment.'}</DialogDescription>
  </DialogHeader>
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 py-4">
- <div className="grid gap-2">
+ <div className="flex flex-col gap-2">
  <Label htmlFor="doNumber">DO Number *</Label>
  <Input 
  id="doNumber" 
@@ -336,7 +336,7 @@ export default function LogisticsPage() {
  required 
  />
  </div>
- <div className="grid gap-2">
+ <div className="flex flex-col gap-2">
  <Label htmlFor="origin">Origin *</Label>
  <Input 
  id="origin" 
@@ -346,7 +346,7 @@ export default function LogisticsPage() {
  required 
  />
  </div>
-  <div className="grid gap-2">
+  <div className="flex flex-col gap-2">
     <Label htmlFor="originCoords">Origin Coordinates (Optional)</Label>
     <Input 
       id="originCoords" 
@@ -356,7 +356,7 @@ export default function LogisticsPage() {
     />
     <p className="text-xs text-muted-foreground">Latitude and longitude separated by comma.</p>
   </div>
-  <div className="grid gap-2">
+  <div className="flex flex-col gap-2">
     <Label htmlFor="destination">Destination (Warehouse) *</Label>
     <select 
       id="destination" 
@@ -373,7 +373,7 @@ export default function LogisticsPage() {
       ))}
     </select>
   </div>
-  <div className="grid gap-2">
+  <div className="flex flex-col gap-2">
     <Label htmlFor="poId">Approved PO *</Label>
     <Popover open={poPopoverOpen} onOpenChange={setPoPopoverOpen}>
       <PopoverTrigger 
@@ -423,14 +423,14 @@ export default function LogisticsPage() {
       </PopoverContent>
     </Popover>
   </div>
- <div className="grid gap-2">
+ <div className="flex flex-col gap-2">
  <Label htmlFor="shippingDate">Shipping Date</Label>
  <DatePicker 
  value={formData.shippingDate}
  onChange={(value) => setFormData({...formData, shippingDate: value})}
  />
  </div>
- <div className="grid gap-2 md:col-span-2">
+ <div className="flex flex-col gap-2 md:col-span-2">
  <Label htmlFor="notes">Notes</Label>
  <Input 
  id="notes" 
