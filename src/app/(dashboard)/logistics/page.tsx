@@ -63,7 +63,7 @@ export default function LogisticsPage() {
 
   const fetchPOs = async () => {
     try {
-      const { data } = await api.get('/api/procurement', { params: { status: 'APPROVED', limit: 100 } });
+      const { data } = await api.get('/api/procurement', { params: { status: 'APPROVED,PROCESSED', limit: 100 } });
       setPos(data.data || []);
     } catch (e) {
       console.error('Failed to fetch POs', e);

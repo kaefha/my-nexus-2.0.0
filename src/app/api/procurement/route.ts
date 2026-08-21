@@ -22,9 +22,16 @@ export async function GET(request: Request) {
     }
 
     if (status) {
-      conditions.push(`status = $${paramIndex}`);
-      queryParams.push(status);
-      paramIndex++;
+      const statuses = status.split(',');
+      if (statuses.length > 1) {
+        conditions.push(`status IN (${statuses.map((_, i) => `$${paramIndex + i}`).join(', ')})`);
+        queryParams.push(...statuses);
+        paramIndex += statuses.length;
+      } else {
+        conditions.push(`status = $${paramIndex}`);
+        queryParams.push(status);
+        paramIndex++;
+      }
     } else if (type === 'active') {
       conditions.push(`status IN ('DRAFT', 'WAITING_APPROVAL', 'WAITING_OPERATION_APPROVAL', 'WAITING_ADMIN_APPROVAL', 'WAITING_OWNER_APPROVAL')`);
     } else if (type === 'history') {
