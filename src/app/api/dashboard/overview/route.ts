@@ -7,7 +7,7 @@ export async function GET() {
   const client = await pool.connect();
   try {
     const materialsRes = await client.query(`SELECT COUNT(*) FROM material_masters WHERE is_active = true`);
-    const projectsRes = await client.query(`SELECT COUNT(*) FROM projects WHERE status = 'ACTIVE'`);
+    const projectsRes = await client.query(`SELECT COUNT(*) FROM projects`);
     const rfcRes = await client.query(`SELECT COUNT(*) FROM rfcs WHERE status IN ('WAITING_SITE_APPROVAL', 'WAITING_FINANCE_APPROVAL', 'SUBMITTED')`);
     
     const poRes = await client.query(`SELECT COUNT(*) FROM purchase_orders WHERE status = 'ACTIVE'`);

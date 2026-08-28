@@ -90,7 +90,7 @@ export default function DashboardPage() {
 
   const kpiCards = kpi ? [
     {
-      title: 'Total Nilai Aset Inventaris',
+      title: 'Total Nilai Material',
       value: `Rp ${Number(kpi.totalAssetValue || 0).toLocaleString('id-ID')}`,
       icon: Wallet,
       change: 'Valuasi Aset Real-time',
