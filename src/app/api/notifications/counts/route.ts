@@ -57,8 +57,8 @@ export async function GET(req: NextRequest) {
     // Anyone who has access to logistics (all roles technically, but mostly ADMIN, PROCUREMENT, OWNER, SUPER_ADMIN)
     const pendingLogisticsRes = await client.query(`
       SELECT COUNT(*) as count
-      FROM purchase_orders
-      WHERE status IN ('APPROVED', 'PROCESSED')
+      FROM delivery_orders
+      WHERE status = 'WAITING'
     `);
     pendingLogistics = parseInt(pendingLogisticsRes.rows[0].count, 10);
 

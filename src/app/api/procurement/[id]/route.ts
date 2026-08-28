@@ -17,6 +17,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         po.rfc_id as "rfcId", 
         po.expected_date as "expectedDate", 
         po.notes, 
+        po.subject,
         po.status, 
         po.items_count as "itemsCount", 
         po.transporter,
@@ -68,7 +69,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const params = await context.params;
     const { id } = params;
     const body = await request.json();
-    const { poNumber, vendor, rfcId, expectedDate, notes, items, transporter, driverName, vehicleNumber, deliverTo, approverId } = body;
+    const { poNumber, vendor, rfcId, expectedDate, notes, subject, items, transporter, driverName, vehicleNumber, deliverTo, approverId } = body;
 
     // Start transaction
     await pool.query('BEGIN');
@@ -82,19 +83,21 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         rfc_id = $3, 
         expected_date = $4, 
         notes = $5,
-        transporter = $6,
-        driver_name = $7,
-        vehicle_number = $8,
-        deliver_to = $9,
-        approver_id = $10,
+        subject = $6,
+        transporter = $7,
+        driver_name = $8,
+        vehicle_number = $9,
+        deliver_to = $10,
+        approver_id = $11,
         updated_at = NOW()
-      WHERE id = $11
+      WHERE id = $12
     `, [
       poNumber, 
       vendor, 
       rfcId || null, 
       expectedDate || null, 
       notes || null, 
+      subject || null,
       transporter || null,
       driverName || null,
       vehicleNumber || null,

@@ -85,7 +85,7 @@ export default function PoDetailPage({ params }: { params: Promise<{ id: string 
   const isProcurement = ['PROCUREMENT', 'ADMIN', 'OWNER', 'SUPER_ADMIN'].includes(user?.role || '');
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
+    <div className="space-y-6 animate-fade-in max-w-[1400px] mx-auto">
       <div className="flex items-center gap-4">
         <Link href="/procurement">
           <Button variant="ghost" size="icon" className="rounded-full">
@@ -109,7 +109,7 @@ export default function PoDetailPage({ params }: { params: Promise<{ id: string 
               <Printer className="w-4 h-4" /> Print PDF
             </Button>
           )}
-          {isProcurement && (
+          {isProcurement && !(po.status === 'WAITING_APPROVAL' && user?.id === po.approverId) && (
             <Button onClick={() => setIsUploadOpen(true)} className="gap-2">
               <Upload className="w-4 h-4" /> Upload Signed Doc
             </Button>
@@ -117,8 +117,8 @@ export default function PoDetailPage({ params }: { params: Promise<{ id: string 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="md:col-span-3 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Order Items</CardTitle>
@@ -221,11 +221,11 @@ export default function PoDetailPage({ params }: { params: Promise<{ id: string 
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Pending Action</CardTitle>
               </CardHeader>
-              <CardContent className="flex gap-2">
-                <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => { setIsUploadForApproval(true); setIsUploadOpen(true); }}>
+              <CardContent className="flex flex-col gap-2">
+                <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => { setIsUploadForApproval(true); setIsUploadOpen(true); }}>
                   <CheckCircle2 className="w-4 h-4 mr-1" /> Approve (Upload Doc)
                 </Button>
-                <Button variant="destructive" className="flex-1" onClick={() => updatePOStatus('REJECTED')}>
+                <Button variant="destructive" className="w-full" onClick={() => updatePOStatus('REJECTED')}>
                   <XCircle className="w-4 h-4 mr-1" /> Reject
                 </Button>
               </CardContent>

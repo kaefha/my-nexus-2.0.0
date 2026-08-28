@@ -53,6 +53,7 @@ export async function GET(request: Request) {
       rfcId: row.rfc_id,
       expectedDate: row.expected_date,
       notes: row.notes,
+      subject: row.subject,
       status: row.status,
       itemsCount: row.items_count,
       createdAt: row.created_at,
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
   export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { poNumber, vendor, rfcId, expectedDate, notes, items, transporter, driverName, vehicleNumber, deliverTo, approverId } = body;
+    const { poNumber, vendor, rfcId, expectedDate, notes, subject, items, transporter, driverName, vehicleNumber, deliverTo, approverId } = body;
 
     if (!poNumber || !vendor || !approverId) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
@@ -83,13 +84,13 @@ export async function GET(request: Request) {
       
       const res = await client.query(`
         INSERT INTO purchase_orders (
-          id, po_number, vendor, rfc_id, expected_date, notes, status, items_count,
+          id, po_number, vendor, rfc_id, expected_date, notes, subject, status, items_count,
           transporter, driver_name, vehicle_number, deliver_to, approver_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         RETURNING *
       `, [
-        id, poNumber, vendor, rfcId || null, expectedDate ? new Date(expectedDate) : null, notes || '', 'WAITING_APPROVAL', items?.length || 0,
+        id, poNumber, vendor, rfcId || null, expectedDate ? new Date(expectedDate) : null, notes || '', subject || null, 'WAITING_APPROVAL', items?.length || 0,
         transporter || null, driverName || null, vehicleNumber || null, deliverTo || null, approverId
       ]);
 
@@ -113,6 +114,7 @@ export async function GET(request: Request) {
         rfcId: row.rfc_id,
         expectedDate: row.expected_date,
         notes: row.notes,
+        subject: row.subject,
         status: row.status,
         itemsCount: row.items_count,
         transporter: row.transporter,

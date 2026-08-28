@@ -125,7 +125,7 @@ export default function PoPrintPage() {
           <div className="flex">
             <div className="w-[100px]">Perihal</div>
             <div className="w-4 mr-2">:</div>
-            <div className="flex-1 font-semibold underline">Delivery Order {itemNames}</div>
+            <div className="flex-1 font-semibold underline">{po.subject || 'Delivery Order'}</div>
           </div>
         </div>
 

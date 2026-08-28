@@ -37,6 +37,7 @@ export default function CreatePOPage() {
     vehicleNumber: '',
     deliverTo: '',
     approverId: '',
+    subject: '',
     items: [] as any[]
   });
 
@@ -78,6 +79,7 @@ export default function CreatePOPage() {
           vehicleNumber: po.vehicleNumber || '',
           deliverTo: po.deliverTo || '',
           approverId: po.approverId || '',
+          subject: po.subject || '',
           items: po.items || []
         });
       }
@@ -90,11 +92,12 @@ export default function CreatePOPage() {
   };
 
   const handleRfcChange = async (rfcId: string) => {
-    setFormData({ ...formData, rfcId });
     if (rfcId === 'none' || !rfcId) {
       setFormData(prev => ({ ...prev, rfcId: '', items: [] }));
       return;
     }
+    
+    setFormData(prev => ({ ...prev, rfcId }));
     
     setIsFetchingRfc(true);
     try {
@@ -175,6 +178,16 @@ export default function CreatePOPage() {
                   value={formData.poNumber}
                   onChange={(e) => setFormData({...formData, poNumber: e.target.value})}
                   required 
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="subject">Perihal (Subject)</Label>
+                <Input 
+                  id="subject" 
+                  placeholder="e.g. Delivery Order Material" 
+                  value={formData.subject}
+                  onChange={(e) => setFormData({...formData, subject: e.target.value})}
                 />
               </div>
 
