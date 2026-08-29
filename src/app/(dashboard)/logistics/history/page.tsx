@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Search, Eye, Loader2, Package, CheckCircle2, MapPin } from 'lucide-react';
+import { Search, Eye, Loader2, Package, CheckCircle2, MapPin, Trash2, MoreHorizontal } from 'lucide-react';
 import api from '@/lib/api';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { formatDate } from '@/lib/utils';
@@ -10,6 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DataTablePagination } from '@/components/shared/DataTablePagination';
+import { useAuth } from '@/hooks/useAuth';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
 
 export default function LogisticsHistoryPage() {
  const [selectedDO, setSelectedDO] = useState<any>(null);
@@ -20,6 +23,9 @@ export default function LogisticsHistoryPage() {
   
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const { user } = useAuth();
+  
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
   const fetchDOs = async () => {
     setLoading(true);
@@ -47,6 +53,17 @@ export default function LogisticsHistoryPage() {
     fetchWarehouses();
     setPage(1);
   }, [search]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this completed Delivery Order? All associated records and evidence will be permanently deleted.')) return;
+    try {
+      await api.delete(`/api/logistics/${id}`);
+      toast.success('Delivery Order deleted successfully');
+      fetchDOs();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete Delivery Order');
+    }
+  };
 
  return (
  <div className="space-y-6">
@@ -115,9 +132,27 @@ export default function LogisticsHistoryPage() {
   </TableCell>
  <TableCell><StatusBadge status={d.status} /></TableCell>
  <TableCell className="text-right">
-    <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => setSelectedDO(d)}>
-      <Eye className="w-4 h-4 mr-1" /> View
-    </Button>
+    {isAdmin ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+          <MoreHorizontal className="h-4 w-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuItem onClick={() => setSelectedDO(d)} className="cursor-pointer">
+            <Eye className="w-4 h-4 mr-2 text-muted-foreground" />
+            View Details
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleDelete(d.id)} className="cursor-pointer text-destructive focus:text-destructive">
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete DO
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : (
+      <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => setSelectedDO(d)}>
+        <Eye className="w-4 h-4 mr-1" /> View
+      </Button>
+    )}
  </TableCell>
  </TableRow>
  ))}
