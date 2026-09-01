@@ -272,10 +272,10 @@ export default function CreateRfcPage() {
                       />
                     </div>
                     <div className="max-h-[300px] overflow-y-auto p-1">
-                      {users.filter(u => ['PROCUREMENT', 'ADMIN', 'OWNER'].includes(u.role) && u.name.toLowerCase().includes(approverSearch.toLowerCase())).length === 0 ? (
+                      {users.filter(u => ['PROCUREMENT', 'ADMIN', 'OWNER', 'DIREKTUR'].includes(u.role) && u.name.toLowerCase().includes(approverSearch.toLowerCase())).length === 0 ? (
                         <div className="py-6 text-center text-sm text-muted-foreground">No approver found.</div>
                       ) : (
-                        users.filter(u => ['PROCUREMENT', 'ADMIN', 'OWNER'].includes(u.role) && u.name.toLowerCase().includes(approverSearch.toLowerCase())).map(u => (
+                        users.filter(u => ['PROCUREMENT', 'ADMIN', 'OWNER', 'DIREKTUR'].includes(u.role) && u.name.toLowerCase().includes(approverSearch.toLowerCase())).map(u => (
                           <div
                             key={u.id}
                             className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground ${formData.approvalDestination === u.id ? 'bg-accent text-accent-foreground' : ''}`}

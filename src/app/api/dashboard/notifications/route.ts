@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const dynamicNotifications: any[] = [];
 
     // 1. RFC Approvals
-    if (['PROCUREMENT', 'OWNER', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
+    if (['PROCUREMENT', 'OWNER', 'DIREKTUR', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
       const rfcRes = await client.query(`
         SELECT id, rfc_number, created_at 
         FROM rfcs 
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       targetPoStatuses = ['WAITING_OPERATION_APPROVAL'];
     } else if (['ADMIN'].includes(role)) {
       targetPoStatuses = ['WAITING_ADMIN_APPROVAL'];
-    } else if (['OWNER', 'PROCUREMENT', 'SUPER_ADMIN'].includes(role)) {
+    } else if (['OWNER', 'DIREKTUR', 'PROCUREMENT', 'SUPER_ADMIN'].includes(role)) {
       targetPoStatuses = ['WAITING_OWNER_APPROVAL'];
     }
 

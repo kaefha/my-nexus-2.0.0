@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     // 1. Count pending RFC approvals
     let rfcApprovals = 0;
-    if (['PROCUREMENT', 'OWNER', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
+    if (['PROCUREMENT', 'OWNER', 'DIREKTUR', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
       const rfcRes = await client.query(`
         SELECT COUNT(*) as count 
         FROM rfcs 
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
 
     // 2. Count pending POs
     let poApprovals = 0;
-    if (['PROCUREMENT', 'OWNER', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
+    if (['PROCUREMENT', 'OWNER', 'DIREKTUR', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
       const poRes = await client.query(`
         SELECT COUNT(*) as count 
         FROM purchase_orders 
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
     // 3. Count ready Material Receives (DOs that are shipping or waiting to be received)
     // For Procurement, Owner, Site Manager, Project Manager, Admin, Super Admin
     let materialReceives = 0;
-    if (['PROCUREMENT', 'OWNER', 'SITE_MANAGER', 'PROJECT_MANAGER', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
+    if (['PROCUREMENT', 'OWNER', 'DIREKTUR', 'SITE_MANAGER', 'PROJECT_MANAGER', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
       const doRes = await client.query(`
         SELECT COUNT(*) as count 
         FROM delivery_orders 

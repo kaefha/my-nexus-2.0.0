@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function CreatePOPage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function CreatePOPage() {
   const [approvedRfcs, setApprovedRfcs] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [rfcItems, setRfcItems] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     poNumber: '',
@@ -82,6 +84,17 @@ export default function CreatePOPage() {
           subject: po.subject || '',
           items: po.items || []
         });
+        
+        if (po.rfcId) {
+          const rfcData = await api.get(`/api/rfc/${po.rfcId}`);
+          if (rfcData?.data?.data?.items) {
+            const mappedItems = rfcData.data.data.items.map((item: any) => ({
+              ...item,
+              quantity: item.requestQty
+            }));
+            setRfcItems(mappedItems);
+          }
+        }
       }
     } catch (err) {
       console.error('Failed to load initial data', err);
@@ -94,6 +107,7 @@ export default function CreatePOPage() {
   const handleRfcChange = async (rfcId: string) => {
     if (rfcId === 'none' || !rfcId) {
       setFormData(prev => ({ ...prev, rfcId: '', items: [] }));
+      setRfcItems([]);
       return;
     }
     
@@ -107,6 +121,7 @@ export default function CreatePOPage() {
           ...item,
           quantity: item.requestQty
         }));
+        setRfcItems(mappedItems);
         setFormData(prev => ({ ...prev, rfcId, items: mappedItems }));
       }
     } catch (error) {
@@ -424,23 +439,39 @@ export default function CreatePOPage() {
           </CardContent>
         </Card>
 
-        {formData.items?.length > 0 && (
+        {rfcItems.length > 0 && (
           <Card className="animate-fade-in" style={{ animationDelay: '300ms' }}>
             <CardHeader>
-              <CardTitle>Auto-filled Items from RFC</CardTitle>
-              <CardDescription>The following items will be linked to this PO.</CardDescription>
+              <CardTitle>Select Items from RFC</CardTitle>
+              <CardDescription>Check the items you want to include in this PO for the selected vendor.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-2 bg-muted/20 p-4 rounded-lg border text-sm">
                 <div className="max-h-[300px] overflow-y-auto space-y-2">
-                  {formData.items.map((item: any, idx: number) => (
-                    <div key={idx} className="flex justify-between items-center bg-background px-3 py-2 rounded-md border">
-                      <span className="truncate pr-2 font-medium">{item.materialName}</span>
-                      <span className="font-semibold whitespace-nowrap bg-primary/10 text-primary px-2 py-1 rounded">
-                        {item.quantity} units
-                      </span>
-                    </div>
-                  ))}
+                  {rfcItems.map((item: any, idx: number) => {
+                    const isSelected = formData.items.some((i: any) => i.materialId === item.materialId);
+                    return (
+                      <div key={idx} className="flex items-center gap-3 bg-background px-3 py-2 rounded-md border">
+                        <Checkbox 
+                          id={`item-${idx}`}
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFormData(prev => ({ ...prev, items: [...prev.items, item] }));
+                            } else {
+                              setFormData(prev => ({ ...prev, items: prev.items.filter((i: any) => i.materialId !== item.materialId) }));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`item-${idx}`} className="flex-1 cursor-pointer font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                          {item.materialName}
+                        </Label>
+                        <span className="font-semibold whitespace-nowrap bg-primary/10 text-primary px-2 py-1 rounded">
+                          {item.quantity} units
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </CardContent>

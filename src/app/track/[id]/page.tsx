@@ -188,8 +188,8 @@ export default function DriverTrackingPage() {
           {isTracking && !isCompleting && (
             <div className="space-y-4">
               <div className="relative">
-                <div className="absolute inset-0 bg-blue-100 rounded-xl animate-pulse" />
-                <div className="relative bg-white border border-blue-200 p-4 rounded-xl flex items-center gap-3">
+                <div className="absolute inset-0 bg-blue-500/20 rounded-xl animate-pulse" />
+                <div className="relative bg-card border border-blue-500/30 p-4 rounded-xl flex items-center gap-3">
                   <div className="w-3 h-3 bg-blue-500 rounded-full animate-ping" />
                   <div className="text-left flex-1">
                     <p className="font-bold text-blue-700">Tracking Active</p>
@@ -219,8 +219,8 @@ export default function DriverTrackingPage() {
           )}
 
           {isCompleting && (
-            <div className="space-y-4 text-left border rounded-xl p-4 bg-slate-50">
-              <h3 className="font-semibold text-lg text-slate-800">Upload Evidence</h3>
+            <div className="space-y-4 text-left border rounded-xl p-4 bg-muted/50">
+              <h3 className="font-semibold text-lg text-foreground">Upload Evidence</h3>
               <p className="text-sm text-slate-500">Please upload a photo of the delivered goods.</p>
               
               <div className="space-y-2">

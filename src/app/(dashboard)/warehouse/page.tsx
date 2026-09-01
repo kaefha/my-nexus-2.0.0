@@ -125,10 +125,10 @@ export default function WarehouseOperationsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val || "")} className="w-full">
-        <TabsList className="inline-flex w-full max-w-[604.8px] h-[35px] p-[3px] items-center rounded-[10.8px] bg-[#F5F5F5]">
-          <TabsTrigger value="info" className="flex justify-center items-center w-[199.594px] self-stretch py-[1.8px] px-[5.4px] gap-[7.2px] rounded-[7.2px] border border-transparent data-[state=active]:bg-[#FFF]"><WarehouseIcon className="w-4 h-4" /> Warehouses Info</TabsTrigger>
-          <TabsTrigger value="receipt" className="flex justify-center items-center w-[199.594px] self-stretch py-[1.8px] px-[5.4px] gap-[7.2px] rounded-[7.2px] border border-transparent data-[state=active]:bg-[#FFF]"><PackageOpen className="w-4 h-4" /> Goods Receipt</TabsTrigger>
-          <TabsTrigger value="stocks" className="flex justify-center items-center w-[199.594px] self-stretch py-[1.8px] px-[5.4px] gap-[7.2px] rounded-[7.2px] border border-transparent data-[state=active]:bg-[#FFF]"><Boxes className="w-4 h-4" /> Stock Overview</TabsTrigger>
+        <TabsList className="inline-flex w-full max-w-[604.8px] h-[35px] p-[3px] items-center rounded-[10.8px] bg-muted">
+          <TabsTrigger value="info" className="flex justify-center items-center w-[199.594px] self-stretch py-[1.8px] px-[5.4px] gap-[7.2px] rounded-[7.2px] border border-transparent data-[state=active]:bg-background data-[state=active]:shadow-sm"><WarehouseIcon className="w-4 h-4" /> Warehouses Info</TabsTrigger>
+          <TabsTrigger value="receipt" className="flex justify-center items-center w-[199.594px] self-stretch py-[1.8px] px-[5.4px] gap-[7.2px] rounded-[7.2px] border border-transparent data-[state=active]:bg-background data-[state=active]:shadow-sm"><PackageOpen className="w-4 h-4" /> Goods Receipt</TabsTrigger>
+          <TabsTrigger value="stocks" className="flex justify-center items-center w-[199.594px] self-stretch py-[1.8px] px-[5.4px] gap-[7.2px] rounded-[7.2px] border border-transparent data-[state=active]:bg-background data-[state=active]:shadow-sm"><Boxes className="w-4 h-4" /> Stock Overview</TabsTrigger>
         </TabsList>
         
         {/* WAREHOUSES INFO TAB */}

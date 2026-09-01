@@ -8,6 +8,10 @@ import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 export default function RfcDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -15,10 +19,50 @@ export default function RfcDetailPage({ params }: { params: Promise<{ id: string
   const router = useRouter();
   const [rfc, setRfc] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [signedDocument, setSignedDocument] = useState<File | null>(null);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     fetchRfcDetails();
   }, [resolvedParams.id]);
+
+  const handleApprove = async () => {
+    setProcessing(true);
+    try {
+      let signedDocumentUrl = null;
+      if (signedDocument) {
+        const uploadData = new FormData();
+        uploadData.append('file', signedDocument);
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: uploadData,
+        });
+        
+        if (uploadRes.ok) {
+          const { url } = await uploadRes.json();
+          signedDocumentUrl = url;
+        }
+      }
+
+      await api.patch(`/api/rfc/${resolvedParams.id}`, { 
+        status: 'APPROVED', 
+        signedDocument: signedDocumentUrl,
+        approverId: user?.id
+      });
+      
+      toast.success('RFC Approved successfully');
+      setIsApproveModalOpen(false);
+      fetchRfcDetails(); // Refresh details
+      window.dispatchEvent(new Event('refreshNotifications'));
+    } catch (error) {
+      console.error('Failed to approve', error);
+      toast.error('Failed to approve RFC');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const fetchRfcDetails = async () => {
     setLoading(true);
@@ -84,6 +128,11 @@ export default function RfcDetailPage({ params }: { params: Promise<{ id: string
           <Button variant="default" size="sm" className="sm:size-default" onClick={() => window.open(`/print/rfc/${rfc.id}`, '_blank')}>
             <Printer className="w-4 h-4 mr-2" /> Print PDF
           </Button>
+          {rfc.status === 'WAITING_APPROVAL' && (user?.role === 'PROCUREMENT' || user?.role === 'OWNER' || user?.role === 'DIREKTUR' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white sm:size-default" onClick={() => setIsApproveModalOpen(true)}>
+              <CheckCircle className="w-4 h-4 mr-2" /> Approve
+            </Button>
+          )}
         </div>
       </div>
 
@@ -136,16 +185,16 @@ export default function RfcDetailPage({ params }: { params: Promise<{ id: string
       </div>
 
       {rfc.notes && (
-        <div className="flex flex-col items-start gap-[3.6px] rounded-[14.4px] bg-[#FFF] shadow-[0_0_0_1px_rgba(10,10,10,0.10)] p-4 w-full max-w-[922px]">
+        <div className="flex flex-col items-start gap-[3.6px] rounded-[14.4px] bg-card border border-border p-4 w-full max-w-[922px]">
           <div className="text-sm font-medium">Additional Notes</div>
-          <div className="text-sm text-foreground flex flex-col items-start self-stretch p-[10.8px] rounded-[7.2px] bg-[rgba(245,245,245,0.30)]">
+          <div className="text-sm text-foreground flex flex-col items-start self-stretch p-[10.8px] rounded-[7.2px] bg-muted/50">
             {rfc.notes}
           </div>
         </div>
       )}
 
       {grandTotal > 0 && (
-        <div className="flex flex-col justify-center items-start w-full max-w-[922px] h-[87px] py-[14.4px] px-0 gap-[14.4px] rounded-[14.4px] border border-[#D6D6D6] bg-white">
+        <div className="flex flex-col justify-center items-start w-full max-w-[922px] h-[87px] py-[14.4px] px-0 gap-[14.4px] rounded-[14.4px] border border-border bg-card">
           <div className="w-full flex items-center justify-between px-[14.4px] sm:px-[24px]">
             <div className="flex items-center gap-4">
               <div className="p-2 bg-primary/10 rounded-full text-primary">
@@ -233,6 +282,42 @@ export default function RfcDetailPage({ params }: { params: Promise<{ id: string
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={isApproveModalOpen} onOpenChange={setIsApproveModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve RFC</DialogTitle>
+            <DialogDescription>
+              You are about to approve RFC {rfc?.rfcNumber}. If required, please upload the signed document below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="signedDocument">Signed Document (Optional)</Label>
+              <Input 
+                id="signedDocument" 
+                type="file"
+                accept=".pdf,image/*"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    setSignedDocument(e.target.files[0]);
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">Upload the wet-signed version of the document.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsApproveModalOpen(false)} disabled={processing}>
+              Cancel
+            </Button>
+            <Button onClick={handleApprove} disabled={processing} className="bg-green-600 hover:bg-green-700 text-white">
+              {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+              Confirm Approval
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

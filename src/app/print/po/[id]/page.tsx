@@ -33,12 +33,16 @@ export default function PoPrintPage() {
     return () => document.body.classList.remove('A4');
   }, [id]);
 
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val || 0);
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-100">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm font-medium text-muted-foreground">Preparing Delivery Order...</p>
+          <p className="text-sm font-medium text-muted-foreground">Preparing Purchase Order...</p>
         </div>
       </div>
     );
@@ -48,36 +52,37 @@ export default function PoPrintPage() {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-100">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Delivery Order Not Found</h2>
+          <h2 className="text-2xl font-bold mb-2">Purchase Order Not Found</h2>
           <p className="text-muted-foreground">The requested document could not be loaded.</p>
         </div>
       </div>
     );
   }
 
-  // Format the item names for the Perihal/Subject
-  const itemNames = po.items && po.items.length > 0 
-    ? po.items.map((item: any) => `${item.materialName} (${item.quantity} ${item.unit || 'Batang'})`).join(', ')
-    : 'Material';
-
-  const dateNowStr = formatDate(new Date().toISOString());
-  // In a real app we might parse this from po.createdAt, but let's use current date for printing
+  const dateNowStr = formatDate(po.expectedDate || new Date().toISOString());
   
-  // Custom date formatter for "Jakarta, 29 Agustus 2025" style
-  const dateObj = new Date();
+  const dateObj = po.expectedDate ? new Date(po.expectedDate) : new Date();
   const monthNames = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
     "Juli", "Agustus", "September", "Oktober", "November", "Desember"
   ];
   const formattedLocalDate = `${dateObj.getDate()} ${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
 
-  // Get roman month for the letter number
-  const romanMonths = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
-  const romanMonth = romanMonths[dateObj.getMonth()];
-
   const defaultPoNumber = po.poNumber || '___/MAI/...';
-  // Attempt to parse out PO number formatting if they used something similar
   const docNumber = defaultPoNumber; 
+
+  // Calculations
+  const totalPO = po.items?.reduce((sum: number, item: any) => sum + (parseFloat(item.quantity || 0) * parseFloat(item.unitPrice || 0)), 0) || 0;
+  
+  // Use DP/PPN from PO or fallback to global settings or defaults
+  const ppnPercent = po.ppnPercent !== undefined ? po.ppnPercent : 11; 
+  const dpPercent = po.dpPercent !== undefined ? po.dpPercent : 30;
+
+  const ppn = (totalPO * ppnPercent) / 100;
+  const totalPoAndPpn = totalPO + ppn;
+  const dpValue = (totalPoAndPpn * dpPercent) / 100;
+  const ppnDpValue = (dpValue * ppnPercent) / 100;
+  const totalDpAndPpn = dpValue + ppnDpValue;
 
   return (
     <>
@@ -91,127 +96,189 @@ export default function PoPrintPage() {
         </button>
       </div>
 
-      <section className="sheet padding-10mm font-serif text-sm leading-relaxed" style={{ backgroundColor: 'white', color: 'black' }}>
+      <section className="sheet padding-10mm font-sans text-xs leading-tight tracking-tight" style={{ backgroundColor: 'white', color: 'black' }}>
         {/* Header / Kop Surat */}
-        <div className="border-b-2 border-black pb-4 mb-8">
-          <div className="flex items-center gap-6">
-            <div className="w-20 h-20 shrink-0">
-              <img src="/logo.png" alt="MAI Logo" className="w-full h-full object-contain" />
+        <div className="border-b-[3px] border-black pb-2 mb-4">
+          <div className="flex items-center">
+            <div className="w-[100px] shrink-0 text-center">
+              <img src="/logo.png" alt="MAI Logo" className="w-[80px] h-[80px] object-contain mx-auto" />
+              <div className="text-[10px] font-bold mt-1">MITRA AKSES INSANI</div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-blue-900 tracking-wide">PT. MITRA AKSES INSANI</h1>
-              <h2 className="text-sm font-semibold tracking-widest text-gray-700 mb-1">CONTRACTOR & SUPPLIER</h2>
-              <p className="text-xs">Jl. Tebet Timur Dalam III G No. 5 RT.002 RW.003 Tebet, Jakarta Selatan 12820</p>
-              <p className="text-xs mt-0.5">
-                <span className="inline-block mr-4">✉ pt.mai@mitraaksesinsani.com</span>
-                <span>☎ (021) 8285 0362</span>
-              </p>
+            <div className="flex-1 text-center pr-[100px]">
+              <h1 className="text-2xl font-bold tracking-wide">PT. MITRA AKSES INSANI</h1>
+              <h2 className="text-sm font-semibold tracking-widest mb-1">CONTRACTOR & SUPPLIER</h2>
+              <p className="text-xs">Jl. Tebet Timur Dalam III G No. 5 RT. 002 RW. 003</p>
+              <p className="text-xs">Tebet, Jakarta Selatan 12820</p>
+            </div>
+          </div>
+          <div className="flex justify-between mt-2 text-[11px]">
+            <div className="flex items-center gap-1">
+              <span className="font-bold">✉</span> pt.mai@mitraaksesinsani.com
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="font-bold">☎</span> (021) 8285 0362
             </div>
           </div>
         </div>
 
         {/* Info Surat */}
-        <div className="mb-8">
-          <div className="flex">
-            <div className="w-[100px]">No.</div>
-            <div className="w-4 mr-2">:</div>
-            <div className="flex-1 font-semibold">{docNumber}</div>
+        <div className="flex justify-between mb-4">
+          <div className="w-1/2">
+            <div className="flex">
+              <div className="w-[60px]">Kepada</div>
+              <div className="w-2">:</div>
+              <div className="font-bold">PT. {po.vendor || 'Vendor Terkait'}</div>
+            </div>
+            <div className="flex">
+              <div className="w-[60px]"></div>
+              <div className="w-2"></div>
+              <div className="text-gray-800">Alamat vendor... (Dari DB)</div>
+            </div>
+            <div className="flex mt-2">
+              <div className="w-[60px]">Up</div>
+              <div className="w-2">:</div>
+              <div>Bapak/Ibu ...</div>
+            </div>
+            <div className="flex">
+              <div className="w-[60px]">Phone</div>
+              <div className="w-2">:</div>
+              <div>+62 ...</div>
+            </div>
           </div>
-          <div className="flex">
-            <div className="w-[100px]">Lampiran</div>
-            <div className="w-4 mr-2">:</div>
-            <div className="flex-1">-</div>
-          </div>
-          <div className="flex">
-            <div className="w-[100px]">Perihal</div>
-            <div className="w-4 mr-2">:</div>
-            <div className="flex-1 font-semibold underline">{po.subject || 'Delivery Order'}</div>
+          <div className="w-1/2">
+            <div className="flex">
+              <div className="w-[80px]">No.</div>
+              <div className="w-2">:</div>
+              <div>{docNumber}</div>
+            </div>
+            <div className="flex">
+              <div className="w-[80px]">Tanggal</div>
+              <div className="w-2">:</div>
+              <div>{formattedLocalDate}</div>
+            </div>
+            <div className="flex">
+              <div className="w-[80px]">Lokasi</div>
+              <div className="w-2">:</div>
+              <div>{po.deliverTo || 'Sumatera'}</div>
+            </div>
           </div>
         </div>
 
-        {/* Tujuan */}
-        <div className="mb-6">
-          <p>Kepada Yth.:</p>
-          <p className="font-bold">Bapak/Ibu {po.driverName || po.transporter || '....................'} </p>
-          {po.vehicleNumber && <p>Kendaraan: {po.vehicleNumber}</p>}
-          <p>Di Tempat</p>
+        <div className="flex mb-4">
+          <div className="w-[60px]">Perihal</div>
+          <div className="w-2">:</div>
+          <div className="font-medium">{po.subject || 'Pengadaan Material'}</div>
         </div>
 
         {/* Isi Surat */}
-        <div className="mb-4">
+        <div className="mb-2">
           <p className="mb-2">Dengan hormat,</p>
-          <p className="mb-4 text-justify">
-            Sesuai dengan konfirmasi yang telah diberikan, dengan ini kami memberitahukan kepada Saudara untuk pengambilan dan pengantaran material milik PT. Mitra Akses Insani dengan rincian sebagai berikut:
+          <p className="mb-2 text-justify">
+            Sehubungan dengan adanya kebutuhan material untuk pekerjaan yang kami terima, kami menunjuk Saudara sebagai pihak penyedia dengan rincian sebagai berikut:
           </p>
-
-          <table className="w-full mb-4 align-top">
-            <tbody>
-              <tr>
-                <td className="w-6 align-top">1.</td>
-                <td className="w-[180px] align-top">Jenis Barang/Material</td>
-                <td className="w-4 align-top">:</td>
-                <td className="align-top font-medium">{itemNames}</td>
-              </tr>
-              <tr>
-                <td className="w-6 align-top">2.</td>
-                <td className="w-[180px] align-top">Alamat Pengambilan</td>
-                <td className="w-4 align-top">:</td>
-                <td className="align-top">
-                  <span className="font-medium">Gudang {po.vendor || 'Vendor Pengirim'}</span>
-                </td>
-              </tr>
-              <tr>
-                <td className="w-6 align-top">3.</td>
-                <td className="w-[180px] align-top">Alamat Pengiriman</td>
-                <td className="w-4 align-top">:</td>
-                <td className="align-top font-medium">
-                  {po.deliverTo || '...................................................'}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          {po.items && po.items.length > 0 && (
-            <div className="mt-6 mb-6">
-              <p className="font-semibold underline mb-2">Rincian material:</p>
-              <ul className="list-disc pl-5">
-                {po.items.map((item: any, i: number) => (
-                  <li key={i} className="mb-1">
-                    {item.materialName} ({item.quantity} {item.unit || 'Batang'}) 
-                    {item.notes ? ` - ${item.notes}` : ''}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {po.notes && (
-            <div className="mt-4 mb-4">
-              <p className="font-semibold underline mb-1">Catatan Tambahan:</p>
-              <p>{po.notes}</p>
-            </div>
-          )}
         </div>
 
-        {/* Penutup */}
-        <div className="mb-12">
-          <p className="text-justify">
-            Demikian Delivery Order ini kami sampaikan. Atas perhatian dan kerja samanya kami ucapkan terima kasih.
-          </p>
+        <table className="w-full mb-4 border-collapse border border-black text-[11px]">
+          <thead>
+            <tr className="bg-[#b3e0af]">
+              <th className="border border-black p-1 text-center w-[5%]">No</th>
+              <th className="border border-black p-1 text-left w-[40%]">Jenis dan Ukuran Kabel</th>
+              <th className="border border-black p-1 text-center w-[10%]">Volume</th>
+              <th className="border border-black p-1 text-center w-[10%]">Satuan</th>
+              <th className="border border-black p-1 text-left w-[15%]">Harga Satuan</th>
+              <th className="border border-black p-1 text-left w-[20%]">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {po.items && po.items.map((item: any, idx: number) => {
+              const qty = parseFloat(item.quantity) || 0;
+              const unitPrice = parseFloat(item.unitPrice) || 0;
+              const total = qty * unitPrice;
+              return (
+                <tr key={idx}>
+                  <td className="border border-black p-1 text-center">{idx + 1}</td>
+                  <td className="border border-black p-1 text-left">{item.materialName} {item.notes ? ` - ${item.notes}` : ''}</td>
+                  <td className="border border-black p-1 text-center">{qty.toLocaleString('id-ID')}</td>
+                  <td className="border border-black p-1 text-center">{item.unit || 'meter'}</td>
+                  <td className="border border-black p-1 text-left">
+                    <div className="flex justify-between">
+                      <span>Rp</span>
+                      <span>{unitPrice.toLocaleString('id-ID')}</span>
+                    </div>
+                  </td>
+                  <td className="border border-black p-1 text-left">
+                    <div className="flex justify-between">
+                      <span>Rp</span>
+                      <span>{total.toLocaleString('id-ID')}</span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            
+            {/* Summaries */}
+            <tr>
+              <td colSpan={4} className="border border-black p-1 font-bold text-center">Total PO</td>
+              <td colSpan={2} className="border border-black p-1 font-bold text-right">
+                <div className="flex justify-between"><span>Rp</span><span>{totalPO.toLocaleString('id-ID')}</span></div>
+              </td>
+            </tr>
+            <tr>
+              <td colSpan={4} className="border border-black p-1 font-bold text-center">PPN {ppnPercent}%</td>
+              <td colSpan={2} className="border border-black p-1 font-bold text-right">
+                <div className="flex justify-between"><span>Rp</span><span>{ppn.toLocaleString('id-ID')}</span></div>
+              </td>
+            </tr>
+            <tr>
+              <td colSpan={4} className="border border-black p-1 font-bold text-center">Total PO + PPN</td>
+              <td colSpan={2} className="border border-black p-1 font-bold text-right">
+                <div className="flex justify-between"><span>Rp</span><span>{totalPoAndPpn.toLocaleString('id-ID')}</span></div>
+              </td>
+            </tr>
+            <tr>
+              <td colSpan={4} className="border border-black p-1 font-bold text-center">DP {dpPercent}%</td>
+              <td colSpan={2} className="border border-black p-1 font-bold text-right">
+                <div className="flex justify-between"><span>Rp</span><span>{dpValue.toLocaleString('id-ID')}</span></div>
+              </td>
+            </tr>
+            <tr>
+              <td colSpan={4} className="border border-black p-1 font-bold text-center">PPN DP {dpPercent}%</td>
+              <td colSpan={2} className="border border-black p-1 font-bold text-right">
+                <div className="flex justify-between"><span>Rp</span><span>{ppnDpValue.toLocaleString('id-ID')}</span></div>
+              </td>
+            </tr>
+            <tr>
+              <td colSpan={4} className="border border-black p-1 font-bold text-center">Total DP + PPN</td>
+              <td colSpan={2} className="border border-black p-1 font-bold text-right">
+                <div className="flex justify-between"><span>Rp</span><span>{totalDpAndPpn.toLocaleString('id-ID')}</span></div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Info Tambahan */}
+        <div className="mb-4 text-[11px]">
+          <p className="mb-2">Adapun kesepakatan pembayaran atas pesanan ini adalah sebagai berikut:</p>
+          <p className="mb-0">Pembayaran: DP {dpPercent}%, Pelunasan {100 - dpPercent}% Sesuai Volume Pengambilan</p>
+          <p className="mb-4">Franco: Pabrik {po.vendor || 'Vendor Terkait'}</p>
+
+          <p className="font-bold">PT. MITRA AKSES INSANI</p>
+          <p>Jl. Arifin Ahmad VI Komp. Vila Alamanda No.77</p>
+          <p>Ie Masen Kayee Adang, Syiah Kuala</p>
+          <p>Kota Banda Aceh, Aceh</p>
+          <p className="font-bold mb-4">NPWP : 82.944.044.5-101.000</p>
+          
+          <p>Demikian PO ini kami buat. Atas kerja samanya, kami ucapkan terima kasih.</p>
         </div>
 
         {/* Tanda Tangan */}
-        <div className="flex justify-between items-end">
-          <div className="w-[30%]">
-            <p className="font-semibold underline mb-1">Tembusan:</p>
-            <p>1. {po.vendor || 'Vendor Terkait'}</p>
-            <p>2. Arsip PT. MAI</p>
-          </div>
-          
-          <div className="w-[35%] text-center">
-            <p className="mb-20">Jakarta, {formattedLocalDate}</p>
-            <div className="border-b border-black font-semibold mx-auto uppercase">
-              {po.approverName || 'MANAJEMEN PT. MAI'}
+        <div className="flex justify-start">
+          <div className="w-[200px]">
+            <p className="mb-16">Jakarta, {formattedLocalDate}</p>
+            <div>
+              {/* <div className="border-b border-black w-full mx-auto"></div> */}
+              <p className="font-bold leading-none underline mb-1">{po.approverName || 'Nama Approver'}</p>
+              <p className="text-xs mt-0.5 leading-none">{po.approverRole ? po.approverRole.replace('_', ' ') : 'APPROVER'}</p>
             </div>
           </div>
         </div>

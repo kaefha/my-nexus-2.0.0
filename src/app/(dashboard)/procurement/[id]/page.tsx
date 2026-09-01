@@ -82,7 +82,7 @@ export default function PoDetailPage({ params }: { params: Promise<{ id: string 
     );
   }
 
-  const isProcurement = ['PROCUREMENT', 'ADMIN', 'OWNER', 'SUPER_ADMIN'].includes(user?.role || '');
+  const isProcurement = ['PROCUREMENT', 'ADMIN', 'OWNER', 'DIREKTUR', 'SUPER_ADMIN'].includes(user?.role || '');
 
   return (
     <div className="space-y-6 animate-fade-in max-w-[1400px] mx-auto">

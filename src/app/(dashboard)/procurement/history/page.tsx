@@ -182,8 +182,8 @@ export default function ProcurementHistoryPage() {
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
       ) : selectedPo ? (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground mb-1">PO Number</p>
               <p className="font-semibold">{selectedPo.poNumber}</p>
@@ -201,23 +201,23 @@ export default function ProcurementHistoryPage() {
               <p>{selectedPo.expectedDate ? formatDate(selectedPo.expectedDate) : '-'}</p>
             </div>
             {selectedPo.rfcId && (
-              <div className="col-span-2">
+              <div className="col-span-1 sm:col-span-2">
                 <p className="text-muted-foreground mb-1">Reference RFC ID</p>
                 <p className="font-mono text-xs break-all bg-muted/30 p-2 rounded">{selectedPo.rfcId}</p>
               </div>
             )}
             {selectedPo.notes && (
-              <div className="col-span-2">
+              <div className="col-span-1 sm:col-span-2">
                 <p className="text-muted-foreground mb-1">Notes</p>
                 <p className="bg-muted/30 p-3 rounded-md text-muted-foreground">{selectedPo.notes}</p>
               </div>
             )}
             {selectedPo.approverName && (
-              <div className="col-span-2 bg-green-50/50 dark:bg-green-950/20 border border-green-100 dark:border-green-900 p-3 rounded-md">
+              <div className="col-span-1 sm:col-span-2 bg-green-50/50 dark:bg-green-950/20 border border-green-100 dark:border-green-900 p-3 rounded-md">
                 <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Processed By</p>
                 <p className="font-medium flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  {selectedPo.approverName} <span className="text-muted-foreground font-normal text-sm">({selectedPo.approverRole})</span>
+                  <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                  <span className="truncate">{selectedPo.approverName}</span> <span className="text-muted-foreground font-normal text-sm truncate">({selectedPo.approverRole})</span>
                 </p>
               </div>
             )}
@@ -226,24 +226,26 @@ export default function ProcurementHistoryPage() {
           <div>
             <h4 className="font-semibold mb-3 border-b pb-2">Order Items</h4>
             {selectedPo.items && selectedPo.items.length > 0 ? (
-              <Table className="whitespace-nowrap">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[250px]">Material</TableHead>
-                    <TableHead className="w-[100px] text-right">Quantity</TableHead>
-                    <TableHead className="w-[250px]">Notes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedPo.items.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.materialName || 'Unknown Material'}</TableCell>
-                      <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-muted-foreground text-xs">{item.notes || '-'}</TableCell>
+              <div className="overflow-x-auto">
+                <Table className="whitespace-nowrap">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[250px]">Material</TableHead>
+                      <TableHead className="w-[100px] text-right">Quantity</TableHead>
+                      <TableHead className="w-[250px]">Notes</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedPo.items.map((item: any) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.materialName || 'Unknown Material'}</TableCell>
+                        <TableCell className="text-right">{item.quantity}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{item.notes || '-'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground italic bg-muted/20 p-4 rounded text-center">No items found for this PO.</p>
             )}

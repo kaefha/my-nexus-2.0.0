@@ -138,6 +138,7 @@ const groupedNavigation = [
           { label: 'Warehouses', href: '/master-data/warehouses' },
           { label: 'Vendors', href: '/master-data/vendors' },
           { label: 'Users', href: '/master-data/users' },
+          { label: 'Terms Configuration', href: '/master-data/terms' },
         ],
       },
     ]
@@ -235,15 +236,15 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
         case 'Project Management':
           return ['SITE_MANAGER', 'PROJECT_MANAGER'].includes(userRole);
         case 'RFC Management':
-          return ['SITE_MANAGER', 'PROJECT_MANAGER', 'PROCUREMENT', 'OWNER'].includes(userRole);
+          return ['SITE_MANAGER', 'PROJECT_MANAGER', 'PROCUREMENT', 'OWNER', 'DIREKTUR'].includes(userRole);
         case 'Procurement':
-          return ['PROCUREMENT', 'OWNER'].includes(userRole);
+          return ['PROCUREMENT', 'OWNER', 'DIREKTUR'].includes(userRole);
         case 'Logistics':
           return true; // All roles can view Logistics
         case 'Warehouse':
         case 'Inventory':
         case 'Material Transfer':
-          return ['PROCUREMENT', 'OWNER', 'SITE_MANAGER', 'PROJECT_MANAGER'].includes(userRole);
+          return ['PROCUREMENT', 'OWNER', 'DIREKTUR', 'SITE_MANAGER', 'PROJECT_MANAGER'].includes(userRole);
         case 'Master Data':
           return ['PROCUREMENT'].includes(userRole);
         default:

@@ -115,9 +115,9 @@ export default function LogisticsDetailPage() {
         
         {/* Render Evidence if it exists */}
         {doData.evidence && (
-          <div className="absolute top-6 left-6 z-40 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 w-[250px] sm:w-[300px]">
-            <p className="text-sm font-semibold text-slate-800 mb-2">Delivery Evidence</p>
-            <div className="rounded-md overflow-hidden border border-slate-200">
+          <div className="absolute top-6 left-6 z-40 bg-card/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-border w-[250px] sm:w-[300px]">
+            <p className="text-sm font-semibold text-foreground mb-2">Delivery Evidence</p>
+            <div className="rounded-md overflow-hidden border border-border">
               <img src={doData.evidence} alt="Evidence" className="w-full h-auto object-cover max-h-[300px]" />
             </div>
             <p className="text-xs text-muted-foreground mt-2 text-center">Uploaded upon delivery</p>
@@ -126,8 +126,8 @@ export default function LogisticsDetailPage() {
         
         {/* Admin actions (Mark as delivered / Evidence upload) */}
         {(doData.status === 'SHIPPING' || doData.status === 'WAITING') && (
-          <div className="absolute bottom-6 right-6 z-40 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-slate-200 min-w-[250px]">
-            <p className="text-sm font-medium mb-2">Admin Actions</p>
+          <div className="absolute bottom-6 right-6 z-40 bg-card/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-border min-w-[250px]">
+            <p className="text-sm font-medium mb-2 text-foreground">Admin Actions</p>
             <Button size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => setEvidenceModalOpen(true)}>
               <Upload className="w-4 h-4 mr-2" /> Upload Evidence (Receive)
             </Button>

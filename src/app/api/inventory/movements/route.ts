@@ -9,6 +9,9 @@ export async function GET(request: Request) {
     const search = searchParams.get('search') || '';
     const limit = parseInt(searchParams.get('limit') || '50');
 
+    const materialId = searchParams.get('materialId');
+    const warehouseId = searchParams.get('warehouseId');
+
     let queryStr = `
       SELECT t.id, t.transaction_type, t.quantity, t.reference_id, t.notes, t.created_at,
              m.material_name, m.material_code, m.unit,
@@ -16,12 +19,21 @@ export async function GET(request: Request) {
       FROM inventory_transactions t
       JOIN material_masters m ON t.material_id = m.id
       JOIN warehouses w ON t.warehouse_id = w.id
+      WHERE 1=1
     `;
     const queryParams: any[] = [];
 
     if (search) {
-      queryStr += ` WHERE m.material_name ILIKE $1 OR m.material_code ILIKE $1 OR t.transaction_type ILIKE $1`;
       queryParams.push(`%${search}%`);
+      queryStr += ` AND (m.material_name ILIKE $${queryParams.length} OR m.material_code ILIKE $${queryParams.length} OR t.transaction_type ILIKE $${queryParams.length})`;
+    }
+    if (materialId) {
+      queryParams.push(materialId);
+      queryStr += ` AND t.material_id = $${queryParams.length}`;
+    }
+    if (warehouseId) {
+      queryParams.push(warehouseId);
+      queryStr += ` AND t.warehouse_id = $${queryParams.length}`;
     }
 
     queryStr += ` ORDER BY t.created_at DESC LIMIT $${queryParams.length + 1}`;

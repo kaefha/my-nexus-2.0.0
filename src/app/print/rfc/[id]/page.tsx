@@ -88,18 +88,9 @@ export default function PrintRfcPage() {
               <td className="p-1 px-2 font-bold w-[25%] align-top">ID Proyek</td>
               <td className="p-1 px-2">{rfc.projectId ? rfc.projectId.split('-')[0].toUpperCase() : '-'}</td>
             </tr>
-            <tr>
-              <td className="p-1 px-2 font-bold w-[25%] align-top" rowSpan={4}>Lokasi Proyek</td>
-              <td className="p-1 px-2 border-b border-gray-300">1. {rfc.location || '-'}</td>
-            </tr>
-            <tr>
-              <td className="p-1 px-2 border-b border-gray-300 text-black">2. (Jika lebih dari 1)</td>
-            </tr>
-            <tr>
-              <td className="p-1 px-2 border-b border-gray-300 text-black">3. (Jika lebih dari 2)</td>
-            </tr>
             <tr className="border-b border-gray-300">
-              <td className="p-1 px-2 text-black">4. (Jika lebih dari 3)</td>
+              <td className="p-1 px-2 font-bold w-[25%] align-top">Lokasi Proyek</td>
+              <td className="p-1 px-2">{rfc.location || '-'}</td>
             </tr>
             <tr className="border-b border-gray-300">
               <td className="p-1 px-2 font-bold w-[25%] align-top">Storage Location</td>
@@ -146,34 +137,28 @@ export default function PrintRfcPage() {
         </div>
 
         {/* Signatures */}
-        <div className="flex justify-between text-xs mt-6 px-8">
+        <div className="flex justify-between text-xs mt-6 px-16">
           {/* Dibuat block */}
-          <div className="w-[30%]">
+          <div className="w-[40%]">
             <p className="mb-16">Dibuat Oleh</p>
-            <div className="text-center w-40">
+            <div className="text-center w-48">
               <div className="border-b border-black w-full mx-auto"></div>
               <p className="font-bold leading-none mt-1">{rfc.requestor?.name || 'Nama'}</p>
               <p className="text-[10px] mt-0.5 leading-none">{rfc.requestor?.role?.replace('_', ' ') || 'Jabatan'}</p>
             </div>
           </div>
 
-          {/* Site Approval block */}
-          <div className="w-[30%]">
-            <p className="mb-16">Diperiksa Oleh (Site)</p>
-            <div className="text-center w-40">
-              <div className="border-b border-black w-full mx-auto"></div>
-              <p className="font-bold leading-none mt-1">{rfc.siteApproverName || 'Site Manager'}</p>
-              <p className="text-[10px] mt-0.5 leading-none">SITE MANAGER</p>
-            </div>
-          </div>
-
           {/* Menyetujui block */}
-          <div className="w-[30%]">
-            <p className="mb-16">Disetujui Oleh (Office)</p>
-            <div className="text-center w-40">
+          <div className="w-[40%] text-right flex flex-col items-end">
+            <p className="mb-16 text-left w-48">Disetujui Oleh</p>
+            <div className="text-center w-48">
               <div className="border-b border-black w-full mx-auto"></div>
-              <p className="font-bold leading-none mt-1">{rfc.financeApproverName || 'Office Manager'}</p>
-              <p className="text-[10px] mt-0.5 leading-none">FINANCE / PMO</p>
+              <p className="font-bold leading-none mt-1">{rfc.financeApproverName || rfc.siteApproverName || 'Approver'}</p>
+              <p className="text-[10px] mt-0.5 leading-none">
+                {rfc.financeApproverRole 
+                  ? rfc.financeApproverRole.replace('_', ' ') 
+                  : (rfc.siteApproverRole ? rfc.siteApproverRole.replace('_', ' ') : 'APPROVER')}
+              </p>
             </div>
           </div>
         </div>

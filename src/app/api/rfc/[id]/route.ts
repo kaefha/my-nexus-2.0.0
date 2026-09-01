@@ -22,7 +22,9 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         u1.name as "requestorName",
         u1.role as "requestorRole",
         s_app.name as "siteApproverName",
-        f_app.name as "financeApproverName"
+        f_app.name as "financeApproverName",
+        s_app.role as "siteApproverRole",
+        f_app.role as "financeApproverRole"
       FROM rfcs r
       LEFT JOIN projects p ON r.project_id = p.id
       LEFT JOIN users u1 ON r.requestor_id = u1.id
@@ -55,6 +57,8 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       },
       siteApproverName: rfc.siteApproverName,
       financeApproverName: rfc.financeApproverName,
+      siteApproverRole: rfc.siteApproverRole,
+      financeApproverRole: rfc.financeApproverRole,
       items: itemsRes.rows
     };
     

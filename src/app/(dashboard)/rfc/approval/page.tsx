@@ -48,7 +48,7 @@ export default function RfcApprovalPage() {
     }
 
     // 2. Role-based fallback
-    if (r.status === 'WAITING_APPROVAL' && (user?.role === 'PROCUREMENT' || user?.role === 'OWNER' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN')) return true;
+    if (r.status === 'WAITING_APPROVAL' && (user?.role === 'PROCUREMENT' || user?.role === 'OWNER' || user?.role === 'DIREKTUR' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN')) return true;
     
     return false;
   });
