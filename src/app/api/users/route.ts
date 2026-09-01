@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    const res = await pool.query(`SELECT id, name, email, role, is_active as "isActive" FROM users ORDER BY name ASC`);
+    const res = await pool.query(`SELECT id, name, email, role, is_active as "isActive", password FROM users ORDER BY name ASC`);
     return NextResponse.json({ data: res.rows }, { status: 200 });
   } catch (error: any) {
     console.error('Error fetching users:', error);
@@ -26,9 +26,9 @@ export async function POST(request: Request) {
 
     const res = await pool.query(`
       INSERT INTO users (id, name, email, role, is_active, password)
-      VALUES ($1, $2, $3, $4, $5, '123')
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
-    `, [id, name, email, role || 'USER', isActive !== undefined ? isActive : true]);
+    `, [id, name, email, role || 'USER', isActive !== undefined ? isActive : true, body.password || '123']);
 
     const row = res.rows[0];
     const user = {
@@ -49,18 +49,35 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, email, role, isActive } = body;
+    const { id, name, email, role, isActive, password } = body;
 
-    if (!id || !name || !email) {
-      return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ message: 'Missing user id' }, { status: 400 });
     }
+
+    const updates = [];
+    const values = [];
+    let counter = 1;
+
+    if (name !== undefined) { updates.push(`name = $${counter++}`); values.push(name); }
+    if (email !== undefined) { updates.push(`email = $${counter++}`); values.push(email); }
+    if (role !== undefined) { updates.push(`role = $${counter++}`); values.push(role); }
+    if (isActive !== undefined) { updates.push(`is_active = $${counter++}`); values.push(isActive); }
+    if (password !== undefined) { updates.push(`password = $${counter++}`); values.push(password); }
+
+    if (updates.length === 0) {
+      return NextResponse.json({ message: 'No fields to update' }, { status: 400 });
+    }
+
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(id);
 
     const res = await pool.query(`
       UPDATE users 
-      SET name = $1, email = $2, role = $3, is_active = $4, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $5
+      SET ${updates.join(', ')}
+      WHERE id = $${counter}
       RETURNING *
-    `, [name, email, role || 'USER', isActive !== undefined ? isActive : true, id]);
+    `, values);
 
     if (res.rowCount === 0) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });

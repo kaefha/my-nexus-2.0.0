@@ -40,7 +40,8 @@ export default function UsersPage() {
     name: '',
     email: '',
     role: 'USER',
-    isActive: true
+    isActive: true,
+    password: ''
   });
 
   const fetchUsers = async () => {
@@ -85,7 +86,7 @@ export default function UsersPage() {
 
   const openCreateDialog = () => {
     setEditId(null);
-    setFormData({ name: '', email: '', role: 'USER', isActive: true });
+    setFormData({ name: '', email: '', role: 'USER', isActive: true, password: '' });
     setIsOpen(true);
   };
 
@@ -96,6 +97,7 @@ export default function UsersPage() {
       email: user.email,
       role: user.role,
       isActive: user.isActive,
+      password: user.password || '',
     });
     setIsOpen(true);
   };
@@ -410,6 +412,17 @@ export default function UsersPage() {
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   required 
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="password">Password {editId ? '(Opsional)' : '*'}</Label>
+                <Input 
+                  id="password" 
+                  type="text"
+                  placeholder={editId ? "Isi untuk mengubah password" : "Password baru"} 
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  required={!editId}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">

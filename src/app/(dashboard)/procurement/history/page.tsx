@@ -94,6 +94,18 @@ export default function ProcurementHistoryPage() {
     }
   };
 
+  const handleDeletePO = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this Purchase Order? This action cannot be undone.')) return;
+    try {
+      await api.delete(`/api/procurement/${id}`);
+      toast.success('Purchase Order deleted successfully');
+      fetchPOs();
+    } catch (error) {
+      console.error('Failed to delete PO:', error);
+      toast.error('Failed to delete Purchase Order');
+    }
+  };
+
  return (
  <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -148,6 +160,16 @@ export default function ProcurementHistoryPage() {
  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openViewDialog(po)}>
  <Eye className="h-4 w-4" />
  </Button>
+ {user?.role === 'ADMIN' && (
+   <Button 
+     variant="ghost" 
+     size="icon" 
+     className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" 
+     onClick={() => handleDeletePO(po.id)}
+   >
+     <Trash2 className="h-4 w-4" />
+   </Button>
+ )}
  </div>
  </TableCell>
  </TableRow>

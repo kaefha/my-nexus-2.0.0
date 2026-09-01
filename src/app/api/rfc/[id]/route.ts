@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
+import { getUserFromRequest } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -133,8 +134,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 }
 
-export async function DELETE(request: Request, context: { params: Promise<{ id: string }> | { id: string } }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> | { id: string } }) {
   try {
+    const user = getUserFromRequest(request);
+    if (!user || user.role !== 'ADMIN') {
+      return NextResponse.json({ message: 'Unauthorized. Only Admin can delete RFC.' }, { status: 403 });
+    }
     const params = await context.params;
     const { id } = params;
     

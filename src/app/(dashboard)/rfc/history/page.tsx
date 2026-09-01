@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FileText, Search, MapPin, Calendar, Clock, Loader2, Printer, History } from 'lucide-react';
+import { FileText, Search, MapPin, Calendar, Clock, Loader2, Printer, History, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,8 +14,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { DataTablePagination } from '@/components/shared/DataTablePagination';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 export default function RfcHistoryPage() {
+ const { user } = useAuth();
  const [rfcs, setRfcs] = useState<any[]>([]);
  const [loading, setLoading] = useState(true);
  const [search, setSearch] = useState('');
@@ -41,6 +44,18 @@ export default function RfcHistoryPage() {
  } finally {
  setLoading(false);
  }
+ };
+
+ const handleDeleteRfc = async (id: string) => {
+   if (!confirm('Are you sure you want to delete this RFC? This action cannot be undone.')) return;
+   try {
+     await api.delete(`/api/rfc/${id}`);
+     toast.success('RFC deleted successfully');
+     fetchRfcs();
+   } catch (error) {
+     console.error('Failed to delete RFC:', error);
+     toast.error('Failed to delete RFC');
+   }
  };
 
  return (
@@ -161,6 +176,15 @@ export default function RfcHistoryPage() {
        <Link href={`/print/rfc/${rfc.id}`} target="_blank" className="text-gray-600 hover:text-black hover:underline flex items-center gap-1 border border-gray-300 rounded px-2 py-0.5" title="Print Request PDF">
          <Printer className="w-3 h-3" /> Print PDF
        </Link>
+     )}
+     {user?.role === 'ADMIN' && (
+       <button
+         onClick={() => handleDeleteRfc(rfc.id)}
+         className="text-destructive hover:bg-destructive/10 rounded p-1 transition-colors ml-1"
+         title="Delete RFC"
+       >
+         <Trash2 className="w-4 h-4" />
+       </button>
      )}
      <div className="text-muted-foreground flex items-center gap-1.5">
        <Calendar className="w-3 h-3" />
