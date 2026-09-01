@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "My Nexus",
+  title: "Gudang Online",
   description: "Enterprise inventory & material management system for network infrastructure. Real-time visibility, end-to-end material tracking, and digital approval workflow.",
   keywords: ["inventory", "material management", "network infrastructure", "warehouse", "supply chain"],
   icons: {

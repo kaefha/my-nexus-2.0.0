@@ -51,7 +51,7 @@ function LoginForm() {
             <div className="relative w-24 h-24 mb-2 flex items-center justify-center">
               <img src="/logo.png" alt="Logo" className="w-full h-full object-contain drop-shadow-md" />
             </div>
-            <h2 className="text-xl font-bold text-foreground mb-1 tracking-tight">My Nexus</h2>
+            <h2 className="text-xl font-bold text-foreground mb-1 tracking-tight">Gudang Online</h2>
             <p className="text-sm text-muted-foreground">Login or sign in below</p>
           </div>
 

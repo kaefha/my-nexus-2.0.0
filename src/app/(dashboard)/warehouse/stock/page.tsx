@@ -101,7 +101,7 @@ export default function StockMonitoringPage() {
         </div>
       </div>
 
-      <div className="bg-card border rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-card rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />

@@ -285,7 +285,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="MAI Logo" className="w-10 h-10 object-contain" />
           <div className="flex flex-col">
-            <h1 className="text-lg font-bold tracking-tight text-primary">My Nexus</h1>
+            <h1 className="text-lg font-bold tracking-tight text-primary">Gudang Online</h1>
             <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 font-medium max-w-[140px]">MAI Network Inventory App</p>
           </div>
         </div>

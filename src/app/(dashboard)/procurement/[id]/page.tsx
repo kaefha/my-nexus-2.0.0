@@ -119,11 +119,11 @@ export default function PoDetailPage({ params }: { params: Promise<{ id: string 
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="md:col-span-3 space-y-6">
-          <Card>
-            <CardHeader>
+          <Card className="border-0 shadow-none ring-0 bg-transparent">
+            <CardHeader className="px-0">
               <CardTitle>Order Items</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-0">
               {po.items && po.items.length > 0 ? (
                 <Table className="whitespace-nowrap">
                   <TableHeader>

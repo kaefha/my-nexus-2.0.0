@@ -103,7 +103,7 @@ export default function RfcDetailPage({ params }: { params: Promise<{ id: string
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
+    <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center gap-4">
         <div className="flex items-start md:items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0 mt-1 md:mt-0">
@@ -185,7 +185,7 @@ export default function RfcDetailPage({ params }: { params: Promise<{ id: string
       </div>
 
       {rfc.notes && (
-        <div className="flex flex-col items-start gap-[3.6px] rounded-[14.4px] bg-card border border-border p-4 w-full max-w-[922px]">
+        <div className="flex flex-col items-start gap-[3.6px] rounded-[14.4px] bg-card border border-border p-4 w-full">
           <div className="text-sm font-medium">Additional Notes</div>
           <div className="text-sm text-foreground flex flex-col items-start self-stretch p-[10.8px] rounded-[7.2px] bg-muted/50">
             {rfc.notes}
@@ -194,7 +194,7 @@ export default function RfcDetailPage({ params }: { params: Promise<{ id: string
       )}
 
       {grandTotal > 0 && (
-        <div className="flex flex-col justify-center items-start w-full max-w-[922px] h-[87px] py-[14.4px] px-0 gap-[14.4px] rounded-[14.4px] border border-border bg-card">
+        <div className="flex flex-col justify-center items-start w-full h-[87px] py-[14.4px] px-0 gap-[14.4px] rounded-[14.4px] border border-border bg-card">
           <div className="w-full flex items-center justify-between px-[14.4px] sm:px-[24px]">
             <div className="flex items-center gap-4">
               <div className="p-2 bg-primary/10 rounded-full text-primary">
