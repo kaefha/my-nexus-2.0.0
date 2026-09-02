@@ -20,7 +20,7 @@ export default function PrintRfcPage() {
 
     const fetchRfc = async () => {
       try {
-        const { data } = await api.get(`/api/rfc/${id}`);
+        const { data } = await api.get(`/api/pr/${id}`);
         setRfc(data.data);
       } catch (error) {
         console.error('Failed to fetch RFC for printing', error);

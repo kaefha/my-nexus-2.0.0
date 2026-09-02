@@ -23,6 +23,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
+import OwnerDashboard from '@/components/dashboard/OwnerDashboard';
 
 interface KPIData {
   totalMaterials: number;
@@ -42,6 +44,7 @@ interface Activity {
 }
 
 export default function DashboardPage() {
+  const { user, isLoading: authLoading } = useAuth();
   const [kpi, setKpi] = useState<KPIData | null>(null);
   const [lowStock, setLowStock] = useState<any[]>([]);
   const [activities, setActivities] = useState<Activity | null>(null);
@@ -146,6 +149,10 @@ export default function DashboardPage() {
         </div>
       </div>
     );
+  }
+
+  if (user?.role === 'OWNER') {
+    return <OwnerDashboard />;
   }
 
   return (

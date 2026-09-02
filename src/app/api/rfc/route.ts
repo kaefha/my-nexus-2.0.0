@@ -1,144 +1,97 @@
 import { NextResponse } from 'next/server';
 import { pool, generateId } from '@/lib/db';
 
-export const dynamic = 'force-dynamic';
-
 export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const status = searchParams.get('status') || 'ALL';
+  const search = searchParams.get('search') || '';
+  const limit = parseInt(searchParams.get('limit') || '100');
+
   try {
-    const { searchParams } = new URL(request.url);
-    const search = (searchParams.get('search') || '').toLowerCase();
-    const status = searchParams.get('status');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    const sort = searchParams.get('sort') || 'desc';
-    
-    // Complex query to join with projects and count items
     let queryStr = `
-      SELECT r.*, 
-             p.project_code, p.project_name, p.customer,
-             u.name as requestor_name, u.role as requestor_role,
-             COALESCE(f_app.name, s_app.name) as approver_name,
-             COALESCE(f_app.role, s_app.role) as approver_role,
-             (SELECT COUNT(*) FROM rfc_items i WHERE i.rfc_id = r.id) as items_count
-      FROM rfcs r
-      LEFT JOIN projects p ON r.project_id = p.id
-      LEFT JOIN users u ON r.requestor_id = u.id
-      LEFT JOIN users s_app ON r.site_approver_id = s_app.id
-      LEFT JOIN users f_app ON r.finance_approver_id = f_app.id
+      SELECT 
+        cr.id, 
+        cr.rfc_number as "rfcNumber", 
+        cr.status, 
+        cr.notes, 
+        cr.created_at as "createdAt",
+        cr.requestor_id as "requestorId",
+        u.name as "requestorName",
+        u.role as "requestorRole",
+        p.project_name as "projectName",
+        w.name as "warehouseName",
+        (SELECT COUNT(*) FROM consumption_request_items i WHERE i.consumption_request_id = cr.id) as "itemsCount"
+      FROM consumption_requests cr
+      LEFT JOIN users u ON cr.requestor_id = u.id
+      LEFT JOIN projects p ON cr.project_id = p.id
+      LEFT JOIN warehouses w ON cr.warehouse_id = w.id
       WHERE 1=1
     `;
     const queryParams: any[] = [];
 
+    if (status !== 'ALL') {
+      queryParams.push(status);
+      queryStr += ` AND cr.status = $${queryParams.length}`;
+    }
+
     if (search) {
-      queryParams.push(`%${search}%`);
-      queryStr += ` AND (LOWER(r.rfc_number) LIKE $${queryParams.length} OR LOWER(p.project_code) LIKE $${queryParams.length} OR LOWER(p.project_name) LIKE $${queryParams.length} OR LOWER(r.location) LIKE $${queryParams.length})`;
+      queryParams.push(`%${search.toLowerCase()}%`);
+      queryStr += ` AND (LOWER(cr.rfc_number) LIKE $${queryParams.length} OR LOWER(p.project_name) LIKE $${queryParams.length} OR LOWER(w.name) LIKE $${queryParams.length})`;
     }
 
-    if (status && status !== 'ALL') {
-      if (status === 'HISTORY') {
-        queryStr += ` AND r.status IN ('APPROVED', 'REJECTED')`;
-      } else {
-        queryParams.push(status);
-        queryStr += ` AND r.status = $${queryParams.length}`;
-      }
-    }
+    queryStr += ` ORDER BY cr.created_at DESC LIMIT $${queryParams.length + 1}`;
+    queryParams.push(limit);
 
-    if (startDate) {
-      queryParams.push(startDate);
-      queryStr += ` AND r.created_at >= $${queryParams.length}`;
-    }
-
-    if (endDate) {
-      queryParams.push(`${endDate} 23:59:59`);
-      queryStr += ` AND r.created_at <= $${queryParams.length}`;
-    }
-
-    const sortOrder = sort === 'asc' ? 'ASC' : 'DESC';
-    queryStr += ` ORDER BY r.created_at ${sortOrder}`;
-    
     const res = await pool.query(queryStr, queryParams);
     
-    const rfcs = res.rows.map((row: any) => ({
-      id: row.id,
-      rfcNumber: row.rfc_number,
-      projectId: row.project_id,
-      requestorId: row.requestor_id,
-      location: row.location,
-      status: row.status,
-      approvalDestination: row.site_approver_id,
-      notes: row.notes,
-      requestDocument: row.request_document,
-      signedDocument: row.signed_document,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      project: {
-        projectCode: row.project_code || '',
-        projectName: row.project_name,
-        customer: row.customer
-      },
-      requestor: {
-        name: row.requestor_name,
-        role: row.requestor_role
-      },
-      approver: {
-        name: row.approver_name,
-        role: row.approver_role
-      },
-      _count: {
-        items: parseInt(row.items_count || '0', 10)
-      }
-    }));
-
-    return NextResponse.json({ data: rfcs }, { status: 200 });
+    return NextResponse.json({ data: res.rows }, { status: 200 });
   } catch (error: any) {
-    console.error('Error fetching RFCs:', error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    console.error('Error fetching consumption requests:', error);
+    return NextResponse.json({ message: 'Internal Server Error', error: error.message }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
+  const body = await request.json();
+  const { projectId, warehouseId, requestorId, notes, items } = body;
+
+  if (!projectId || !warehouseId || !requestorId || !items || items.length === 0) {
+    return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
+  }
+
   const client = await pool.connect();
   try {
-    const body = await request.json();
-    const { projectId, location, requestorId, requestDate, approvalDestination, notes, items, requestDocument } = body;
-
-    if (!projectId || !location || !requestorId || !approvalDestination || !items || !items.length) {
-      return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
-    }
-
     await client.query('BEGIN');
 
-    // RFCs start with WAITING_APPROVAL
     const status = 'WAITING_APPROVAL';
 
-    const id = generateId();
-    // Use format RFC-YYYYMMDD-XXXX
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    // Generate RFC number
+    const date = new Date();
+    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const rfcNumber = `RFC-${dateStr}-${randomSuffix}`;
+    const rfcNumber = `RFC-\${dateStr}-\${randomSuffix}`;
+
+    const id = generateId();
 
     await client.query(`
-      INSERT INTO rfcs (id, rfc_number, project_id, requestor_id, location, status, notes, request_document, request_date, site_approver_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-    `, [id, rfcNumber, projectId, requestorId, location, status, notes || '', requestDocument || null, requestDate ? new Date(requestDate) : new Date(), approvalDestination]);
+      INSERT INTO consumption_requests (id, rfc_number, project_id, warehouse_id, requestor_id, status, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `, [id, rfcNumber, projectId, warehouseId, requestorId, status, notes || '']);
 
     for (const item of items) {
-      if (!item.materialId || !item.requestQty) continue;
-      
       const itemId = generateId();
       await client.query(`
-        INSERT INTO rfc_items (id, rfc_id, material_id, request_qty, notes)
+        INSERT INTO consumption_request_items (id, consumption_request_id, material_id, request_qty, notes)
         VALUES ($1, $2, $3, $4, $5)
-      `, [itemId, id, item.materialId, parseInt(item.requestQty, 10), item.notes || '']);
+      `, [itemId, id, item.materialId, item.requestQty, item.notes || '']);
     }
 
     await client.query('COMMIT');
-
-    return NextResponse.json({ message: 'RFC created successfully', data: { id: id } }, { status: 201 });
+    return NextResponse.json({ message: 'RFC created successfully', data: { id } }, { status: 201 });
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error('Error creating RFC:', error);
-    return NextResponse.json({ message: 'Internal server error', error: error.message || String(error) }, { status: 500 });
+    return NextResponse.json({ message: 'Failed to create RFC', error: error.message }, { status: 500 });
   } finally {
     client.release();
   }

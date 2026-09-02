@@ -123,6 +123,29 @@ export default function WarehouseDetailsPage() {
         </Card>
       </div>
 
+      {/* Associated Projects */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+            <WarehouseIcon className="w-4 h-4 text-primary" /> Associated Projects
+          </CardTitle>
+          <CardDescription>Projects that have used or are using materials from this warehouse.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {warehouse.projects && warehouse.projects.length > 0 ? (
+            <div className="flex flex-wrap gap-2 pt-2">
+              {warehouse.projects.map((p: any) => (
+                <Badge key={p.id} variant="outline" className="px-3 py-1 bg-primary/5 text-primary">
+                  {p.code} - {p.name}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground pt-2">No projects have used this warehouse yet.</p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Materials List */}
       <Card>
         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">

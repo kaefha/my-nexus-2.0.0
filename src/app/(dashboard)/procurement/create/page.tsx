@@ -59,7 +59,7 @@ export default function CreatePOPage() {
   const fetchInitialData = async () => {
     try {
       const [rfcRes, vendorRes, usersRes] = await Promise.all([
-        api.get('/api/rfc?status=APPROVED'),
+        api.get('/api/pr?status=APPROVED'),
         api.get('/api/vendors'),
         api.get('/api/users')
       ]);
@@ -86,7 +86,7 @@ export default function CreatePOPage() {
         });
         
         if (po.rfcId) {
-          const rfcData = await api.get(`/api/rfc/${po.rfcId}`);
+          const rfcData = await api.get(`/api/pr/${po.rfcId}`);
           if (rfcData?.data?.data?.items) {
             const mappedItems = rfcData.data.data.items.map((item: any) => ({
               ...item,
@@ -115,7 +115,7 @@ export default function CreatePOPage() {
     
     setIsFetchingRfc(true);
     try {
-      const { data } = await api.get(`/api/rfc/${rfcId}`);
+      const { data } = await api.get(`/api/pr/${rfcId}`);
       if (data?.data?.items) {
         const mappedItems = data.data.items.map((item: any) => ({
           ...item,

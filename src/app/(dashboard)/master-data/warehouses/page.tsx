@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Warehouse, Search, Plus, Loader2, Pencil, Trash2, MapPin, Upload, Image as ImageIcon, X, ExternalLink, Map, Globe } from 'lucide-react';
+import { Warehouse, Search, Plus, Loader2, Pencil, Trash2, MapPin, Upload, Image as ImageIcon, X, ExternalLink, Map, Globe, Check, ChevronsUpDown, MoreHorizontal, Eye } from 'lucide-react';
 import api from '@/lib/api';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,12 +12,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ExcelImportExport } from '@/components/ExcelImportExport';
 import { toast } from 'sonner';
 import { DataTablePagination } from '@/components/shared/DataTablePagination';
+import { Badge } from '@/components/ui/badge';
 
 export default function WarehousePage() {
   const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [projectsList, setProjectsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('ALL');
@@ -42,6 +45,13 @@ export default function WarehousePage() {
 
   // Preview state
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  
+  // Details state
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsData, setDetailsData] = useState<any>(null);
+  
+  // Project Search State
+  const [projectSearch, setProjectSearch] = useState('');
 
   const [formData, setFormData] = useState({
     code: '',
@@ -51,7 +61,8 @@ export default function WarehousePage() {
     evidence: '',
     type: 'MAIN',
     capacity: '',
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    projectIds: [] as string[]
   });
 
   const [isUploading, setIsUploading] = useState(false);
@@ -68,6 +79,19 @@ export default function WarehousePage() {
       setLoading(false); 
     }
   };
+
+  const fetchProjects = async () => {
+    try {
+      const { data } = await api.get('/api/projects?limit=100');
+      setProjectsList(data.data || []);
+    } catch (e) {
+      console.error('Failed to fetch projects', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
 
   useEffect(() => {
     fetchWarehouses();
@@ -98,7 +122,8 @@ export default function WarehousePage() {
 
   const openCreateDialog = () => {
     setEditId(null);
-    setFormData({ code: '', name: '', location: '', coordinates: '', evidence: '', type: 'MAIN', capacity: '', status: 'ACTIVE' });
+    setFormData({ code: '', name: '', location: '', coordinates: '', evidence: '', type: 'MAIN', capacity: '', status: 'ACTIVE', projectIds: [] });
+    setProjectSearch('');
     setIsOpen(true);
   };
 
@@ -112,9 +137,16 @@ export default function WarehousePage() {
       evidence: w.evidence || '',
       type: w.type || 'MAIN',
       capacity: w.capacity ? w.capacity.toString() : '',
-      status: w.status || 'ACTIVE'
+      status: w.status || 'ACTIVE',
+      projectIds: w.projects ? w.projects.map((p: any) => p.id) : []
     });
+    setProjectSearch('');
     setIsOpen(true);
+  };
+
+  const openDetailsDialog = (w: any) => {
+    setDetailsData(w);
+    setDetailsOpen(true);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -385,10 +417,6 @@ export default function WarehousePage() {
                   </TableHead>
                   <TableHead className="w-[150px]">Code</TableHead>
                   <TableHead className="w-[350px]">Name</TableHead>
-                  <TableHead className="w-[280px]">Location</TableHead>
-                  <TableHead className="w-[150px]">Coordinates</TableHead>
-                  <TableHead className="w-[100px]">Evidence</TableHead>
-                  <TableHead className="w-[120px]">Type</TableHead>
                   <TableHead className="w-[120px]">Status</TableHead>
                   <TableHead className="w-[80px] text-right">Action</TableHead>
                 </TableRow>
@@ -420,57 +448,28 @@ export default function WarehousePage() {
                           {w.name}
                         </span>
                       </TableCell>
-                      <TableCell className="whitespace-normal max-w-[280px] text-xs text-muted-foreground">
-                        <span 
-                          className="line-clamp-2 block leading-snug break-words"
-                          style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-                          title={w.location || '-'}
-                        >
-                          {w.location || '-'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {w.coordinates ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/30 px-2 py-1 rounded-md w-fit hover:bg-muted/50 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-primary/20">
-                              <MapPin className="w-3 h-3 text-primary" />
-                              {w.coordinates.split(',').map((c: string) => parseFloat(c.trim()).toFixed(5)).join(', ')}
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start">
-                              <DropdownMenuItem onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(w.coordinates)}`, '_blank')} className="flex items-center gap-2 cursor-pointer">
-                                <Map className="w-4 h-4 text-muted-foreground" />
-                                Google Maps
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => window.open(`https://earth.google.com/web/search/${encodeURIComponent(w.coordinates)}`, '_blank')} className="flex items-center gap-2 cursor-pointer">
-                                <Globe className="w-4 h-4 text-muted-foreground" />
-                                Google Earth
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ) : (
-                          <span className="text-muted-foreground opacity-50">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {w.evidence ? (
-                          <button onClick={() => setPreviewImage(w.evidence)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                            <img src={w.evidence} alt="Evidence" className="w-8 h-8 object-cover rounded-md border" />
-                          </button>
-                        ) : (
-                          <span className="text-muted-foreground opacity-50">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{w.type}</TableCell>
                       <TableCell><StatusBadge status={w.status} /></TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => openEditDialog(w)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => { setDeleteId(w.id); setDeleteOpen(true); }}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger render={<Button variant="ghost" className="h-8 w-8 p-0" />}>
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openDetailsDialog(w)} className="cursor-pointer">
+                              <Eye className="mr-2 h-4 w-4" />
+                              <span>Lihat Detil</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEditDialog(w)} className="cursor-pointer">
+                              <Pencil className="mr-2 h-4 w-4" />
+                              <span>Edit</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setDeleteId(w.id); setDeleteOpen(true); }} className="cursor-pointer text-destructive focus:text-destructive">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>Hapus</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   );
@@ -497,89 +496,58 @@ export default function WarehousePage() {
       </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-2xl">
           <form onSubmit={handleSubmit}>
             <DialogHeader>
               <DialogTitle>{editId ? 'Edit Warehouse' : 'New Warehouse'}</DialogTitle>
               <DialogDescription>{editId ? 'Update warehouse details.' : 'Add a new warehouse location.'}</DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="code">Warehouse Code *</Label>
-                <Input 
-                  id="code" 
-                  placeholder="e.g. WH-JKT-01" 
-                  value={formData.code}
-                  onChange={(e) => setFormData({...formData, code: e.target.value})}
-                  required 
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="name">Warehouse Name *</Label>
-                <Input 
-                  id="name" 
-                  placeholder="e.g. Jakarta Central Hub" 
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  required 
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="location">Location / Address</Label>
-                <Input 
-                  id="location" 
-                  placeholder="e.g. Jl. Sudirman No. 123" 
-                  value={formData.location}
-                  onChange={(e) => setFormData({...formData, location: e.target.value})}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="coordinates">Coordinates (Lat, Long)</Label>
-                <Input 
-                  id="coordinates" 
-                  placeholder="e.g. -6.2234, 106.8463" 
-                  value={formData.coordinates}
-                  onChange={(e) => setFormData({...formData, coordinates: e.target.value})}
-                />
-              </div>
-              <div className="grid gap-2 min-w-0">
-                <Label>Warehouse Evidence (Photo)</Label>
-                <div className="flex flex-col gap-3 min-w-0">
-                  {!formData.evidence && (
-                    <Button variant="outline" type="button" className="relative overflow-hidden cursor-pointer w-full sm:w-fit">
-                      {isUploading ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploading...</>
-                      ) : (
-                        <><Upload className="w-4 h-4 mr-2" /> Select File</>
-                      )}
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="absolute inset-0 opacity-0 cursor-pointer" 
-                        onChange={handleFileUpload} 
-                        disabled={isUploading}
-                      />
-                    </Button>
-                  )}
-                  {formData.evidence && (
-                    <div className="flex items-center justify-between p-2.5 border rounded-xl bg-card w-full shadow-sm overflow-hidden">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 border">
-                          <img src={formData.evidence} alt="Preview" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex flex-col min-w-0 pr-2">
-                          <span className="text-sm font-medium truncate">{formData.evidence.split('/').pop()?.split('?')[0] || 'evidence_file'}</span>
-                          <span className="text-xs text-muted-foreground uppercase">{formData.evidence.split('.').pop()?.split('?')[0] || 'IMG'} • File</span>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" type="button" onClick={() => setFormData({ ...formData, evidence: '' })} className="h-8 w-8 text-muted-foreground shrink-0">
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
+            <div className="flex flex-col gap-4 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="code">Warehouse Code *</Label>
+                  <Input 
+                    id="code" 
+                    placeholder="e.g. WH-JKT-01" 
+                    value={formData.code}
+                    onChange={(e) => setFormData({...formData, code: e.target.value})}
+                    required 
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="name">Warehouse Name *</Label>
+                  <Input 
+                    id="name" 
+                    placeholder="e.g. Jakarta Central Hub" 
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    required 
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="location">Location / Address</Label>
+                  <Input 
+                    id="location" 
+                    placeholder="e.g. Jl. Sudirman No. 123" 
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="coordinates">Coordinates (Lat, Long)</Label>
+                  <Input 
+                    id="coordinates" 
+                    placeholder="e.g. -6.2234, 106.8463" 
+                    value={formData.coordinates}
+                    onChange={(e) => setFormData({...formData, coordinates: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="type">Type</Label>
                   <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val || "" })}>
@@ -604,21 +572,125 @@ export default function WarehousePage() {
                   />
                 </div>
               </div>
-              {editId && (
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val || "" })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ACTIVE">Active</SelectItem>
-                      <SelectItem value="INACTIVE">Inactive</SelectItem>
-                      <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {editId ? (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={formData.status} onValueChange={(val) => setFormData({ ...formData, status: val || "" })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ACTIVE">Active</SelectItem>
+                        <SelectItem value="INACTIVE">Inactive</SelectItem>
+                        <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : <div className="hidden md:block" />}
+                
+                <div className="flex flex-col gap-2 min-w-0">
+                  <Label>Warehouse Evidence (Photo)</Label>
+                  <div className="flex flex-col gap-3 min-w-0">
+                    {!formData.evidence && (
+                      <Button variant="outline" type="button" className="relative overflow-hidden cursor-pointer w-full sm:w-fit">
+                        {isUploading ? (
+                          <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploading...</>
+                        ) : (
+                          <><Upload className="w-4 h-4 mr-2" /> Select File</>
+                        )}
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          className="absolute inset-0 opacity-0 cursor-pointer" 
+                          onChange={handleFileUpload} 
+                          disabled={isUploading}
+                        />
+                      </Button>
+                    )}
+                    {formData.evidence && (
+                      <div className="flex items-center justify-between p-2.5 border rounded-xl bg-card w-full shadow-sm overflow-hidden">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 border">
+                            <img src={formData.evidence} alt="Preview" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex flex-col min-w-0 pr-2">
+                            <span className="text-sm font-medium truncate">{formData.evidence.split('/').pop()?.split('?')[0] || 'evidence_file'}</span>
+                            <span className="text-xs text-muted-foreground uppercase">{formData.evidence.split('.').pop()?.split('?')[0] || 'IMG'} • File</span>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="icon" type="button" onClick={() => setFormData({ ...formData, evidence: '' })} className="h-8 w-8 text-muted-foreground shrink-0">
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
+              </div>
+
+              <div className="flex flex-col gap-2 mt-2 pt-4 border-t">
+                <Label>Assigned Projects</Label>
+                <div className="text-sm text-muted-foreground mb-2">Pilih project yang menggunakan gudang ini.</div>
+                
+                <Popover>
+                  <PopoverTrigger render={<Button variant="outline" role="combobox" className="w-full justify-between font-normal h-auto py-2.5" />}>
+                    {formData.projectIds.length > 0 
+                      ? `${formData.projectIds.length} project dipilih` 
+                      : "Pilih project..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--anchor-width)] p-0" align="start">
+                    <div className="flex items-center border-b px-3">
+                      <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                      <Input 
+                        placeholder="Cari project..." 
+                        className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                        value={projectSearch}
+                        onChange={(e) => setProjectSearch(e.target.value)}
+                      />
+                    </div>
+                    <div className="max-h-[220px] overflow-y-auto p-2">
+                      {projectsList
+                        .filter(p => 
+                          (p.projectName || p.name || '').toLowerCase().includes(projectSearch.toLowerCase()) || 
+                          (p.projectCode || p.code || '').toLowerCase().includes(projectSearch.toLowerCase())
+                        )
+                        .map(p => (
+                          <label key={p.id} className="flex items-start gap-2 cursor-pointer rounded-md p-2 hover:bg-muted/50">
+                            <Checkbox 
+                              checked={formData.projectIds.includes(p.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setFormData({...formData, projectIds: [...formData.projectIds, p.id]});
+                                } else {
+                                  setFormData({...formData, projectIds: formData.projectIds.filter(id => id !== p.id)});
+                                }
+                              }}
+                            />
+                            <div className="grid gap-0.5 min-w-0">
+                              <span className="text-sm font-medium leading-none truncate">{p.projectCode || p.code}</span>
+                              <span className="text-xs text-muted-foreground truncate">{p.projectName || p.name}</span>
+                            </div>
+                          </label>
+                      ))}
+                      {projectsList.filter(p => (p.projectName || p.name || '').toLowerCase().includes(projectSearch.toLowerCase()) || (p.projectCode || p.code || '').toLowerCase().includes(projectSearch.toLowerCase())).length === 0 && (
+                        <div className="p-4 text-center text-sm text-muted-foreground">Tidak ada project ditemukan.</div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {formData.projectIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {projectsList.filter(p => formData.projectIds.includes(p.id)).map(p => (
+                      <Badge key={p.id} variant="secondary" className="px-2 py-1 font-medium">
+                        {p.projectCode || p.code}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>
@@ -700,6 +772,80 @@ export default function WarehousePage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="sm:max-w-3xl p-1 bg-transparent border-none shadow-none">
+          {previewImage && (
+            <img src={previewImage} alt="Preview Evidence" className="w-full h-auto rounded-xl object-contain max-h-[80vh]" />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Details Dialog */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Warehouse Details</DialogTitle>
+          </DialogHeader>
+          {detailsData && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Warehouse Code</h4>
+                  <p className="text-sm font-medium">{detailsData.code}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Warehouse Name</h4>
+                  <p className="text-sm font-medium">{detailsData.name}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Location</h4>
+                  <p className="text-sm">{detailsData.location || '-'}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Coordinates</h4>
+                  <p className="text-sm">{detailsData.coordinates || '-'}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Type & Capacity</h4>
+                  <p className="text-sm">{detailsData.type || '-'} • {detailsData.capacity ? `${detailsData.capacity} CBM` : '-'}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Status</h4>
+                  <StatusBadge status={detailsData.status} />
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Evidence Photo</h4>
+                  {detailsData.evidence ? (
+                    <img src={detailsData.evidence} alt="Evidence" className="w-full h-auto max-h-[200px] object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setPreviewImage(detailsData.evidence)} />
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic border border-dashed rounded-md p-4 text-center">No photo available</div>
+                  )}
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Assigned Projects</h4>
+                  {detailsData.projects && detailsData.projects.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {detailsData.projects.map((p: any) => (
+                        <Badge key={p.id} variant="secondary">
+                          {p.code || p.projectCode}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic">No assigned projects</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailsOpen(false)}>Tutup</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

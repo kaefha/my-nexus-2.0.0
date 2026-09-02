@@ -50,6 +50,11 @@ const groupedNavigation = [
         href: '/',
         icon: LayoutDashboard,
       },
+      {
+        label: 'Owner Dashboard',
+        href: '/owner-dashboard',
+        icon: BarChart3,
+      },
     ]
   },
   {
@@ -65,15 +70,16 @@ const groupedNavigation = [
         ],
       },
       {
-        label: 'RFC Management',
-        href: '/rfc',
+        label: 'PR Management',
+        href: '/pr',
         icon: FileText,
         children: [
-          { label: 'RFC List', href: '/rfc' },
-          { label: 'Approval Queue', href: '/rfc/approval' },
-          { label: 'RFC History', href: '/rfc/history' },
+          { label: 'PR List', href: '/pr' },
+          { label: 'Approval Queue', href: '/pr/approval' },
+          { label: 'Purchase Log', href: '/pr/history' },
         ],
       },
+
       {
         label: 'Procurement',
         href: '/procurement',
@@ -91,6 +97,15 @@ const groupedNavigation = [
         children: [
           { label: 'Delivery Tracking', href: '/logistics' },
           { label: 'Shipment History', href: '/logistics/history' },
+        ],
+      },
+      {
+        label: 'RFC',
+        href: '/rfc',
+        icon: FileText,
+        children: [
+          { label: 'RFC List', href: '/rfc' },
+          { label: 'Approval Queue', href: '/rfc/approval' },
         ],
       },
     ]
@@ -154,7 +169,7 @@ function NavCollapsible({ item, pathname, counts }: { item: any, pathname: strin
   }, [isItemActive]);
 
   const getBadgeForLabel = (childLabel: string, parentLabel: string) => {
-    if (childLabel === 'Approval Queue' && parentLabel === 'RFC Management' && counts.rfcApprovals > 0) {
+    if (childLabel === 'Approval Queue' && parentLabel === 'PR Management' && counts.rfcApprovals > 0) {
       return <Badge variant="destructive" className="ml-auto h-5 px-1.5 flex items-center justify-center text-[10px]">{counts.rfcApprovals}</Badge>;
     }
     if (childLabel === 'Approval Queue' && parentLabel === 'Procurement' && counts.poApprovals > 0) {
@@ -171,7 +186,7 @@ function NavCollapsible({ item, pathname, counts }: { item: any, pathname: strin
 
   // Check if group itself needs a badge
   const groupHasNotification = () => {
-    if (item.label === 'RFC Management' && counts.rfcApprovals > 0) return true;
+    if (item.label === 'PR Management' && counts.rfcApprovals > 0) return true;
     if (item.label === 'Procurement' && counts.poApprovals > 0) return true;
     if (item.label === 'Logistics' && counts.pendingLogistics > 0) return true;
     if (item.label === 'Warehouse' && counts.materialReceives > 0) return true;
@@ -235,8 +250,12 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
       switch (item.label) {
         case 'Project Management':
           return ['SITE_MANAGER', 'PROJECT_MANAGER'].includes(userRole);
-        case 'RFC Management':
+        case 'PR Management':
           return ['SITE_MANAGER', 'PROJECT_MANAGER', 'PROCUREMENT', 'OWNER', 'DIREKTUR'].includes(userRole);
+        case 'RFC':
+          return userRole !== 'OWNER';
+        case 'Owner Dashboard':
+          return false; // Only Admin sees it (Admin bypasses this switch)
         case 'Procurement':
           return ['PROCUREMENT', 'OWNER', 'DIREKTUR'].includes(userRole);
         case 'Logistics':

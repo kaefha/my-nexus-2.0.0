@@ -31,17 +31,32 @@ export async function GET(
     }
 
     const row = res.rows[0];
+    
+    // Fetch associated projects from warehouse_projects mapping
+    const projectsRes = await pool.query(`
+      SELECT p.id, p.project_name as name, p.project_code as code
+      FROM warehouse_projects wp
+      JOIN projects p ON wp.project_id = p.id
+      WHERE wp.warehouse_id = $1
+    `, [id]);
+    
     const warehouse = {
       id: row.id,
       code: row.code,
       name: row.name,
       location: row.location,
       coordinates: row.coordinates,
+      evidence: row.evidence,
       type: row.type,
       capacity: row.capacity,
       status: row.status,
       totalMaterials: parseInt(row.total_materials, 10) || 0,
       totalStock: parseInt(row.total_stock, 10) || 0,
+      projects: projectsRes.rows.map(p => ({
+        id: p.id,
+        name: p.name,
+        code: p.code
+      }))
     };
 
     return NextResponse.json({ data: warehouse }, { status: 200 });

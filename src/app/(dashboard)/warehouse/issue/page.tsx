@@ -29,7 +29,7 @@ export default function MaterialIssuePage() {
     const fetchData = async () => {
       try {
         // Fetch APPROVED RFCs
-        const rfcRes = await api.get('/api/rfc', { params: { status: 'APPROVED' } });
+        const rfcRes = await api.get('/api/pr', { params: { status: 'APPROVED' } });
         setRfcs(rfcRes.data?.data || []);
 
         // Fetch Warehouses
@@ -57,7 +57,7 @@ export default function MaterialIssuePage() {
     
     setIsFetchingRfc(true);
     try {
-      const { data } = await api.get(`/api/rfc/${rfcId}`);
+      const { data } = await api.get(`/api/pr/${rfcId}`);
       if (data?.data) {
         setSelectedRfc(data.data);
         
@@ -110,7 +110,7 @@ export default function MaterialIssuePage() {
       setSelectedWarehouseId('');
       
       // Refresh RFC list
-      const rfcRes = await api.get('/api/rfc', { params: { status: 'APPROVED' } });
+      const rfcRes = await api.get('/api/pr', { params: { status: 'APPROVED' } });
       setRfcs(rfcRes.data?.data || []);
       
     } catch (error) {

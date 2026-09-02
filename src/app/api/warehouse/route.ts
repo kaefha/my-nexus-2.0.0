@@ -16,7 +16,13 @@ export async function GET(request: Request) {
       SELECT 
         w.*,
         COUNT(DISTINCT s.material_id) as total_materials,
-        COALESCE(SUM(s.quantity), 0) as total_stock
+        COALESCE(SUM(s.quantity), 0) as total_stock,
+        (
+          SELECT json_agg(json_build_object('id', p.id, 'name', p.project_name, 'code', p.project_code))
+          FROM warehouse_projects wp
+          JOIN projects p ON wp.project_id = p.id
+          WHERE wp.warehouse_id = w.id
+        ) as projects
       FROM warehouses w
       LEFT JOIN inventory_stocks s ON w.id = s.warehouse_id
     `;
@@ -66,6 +72,7 @@ export async function GET(request: Request) {
       status: row.status,
       totalMaterials: parseInt(row.total_materials, 10) || 0,
       totalStock: parseInt(row.total_stock, 10) || 0,
+      projects: row.projects || [],
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }));
@@ -80,7 +87,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { code, name, location, coordinates, evidence, type, capacity } = body;
+    const { code, name, location, coordinates, evidence, type, capacity, projectIds } = body;
 
     if (!code || !name) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
@@ -94,6 +101,12 @@ export async function POST(request: Request) {
       RETURNING *
     `, [id, code, name, location || '', coordinates || '', evidence || null, type || 'MAIN', capacity || '', 'ACTIVE']);
 
+    if (projectIds && Array.isArray(projectIds) && projectIds.length > 0) {
+      for (const projectId of projectIds) {
+        await pool.query(`INSERT INTO warehouse_projects (warehouse_id, project_id) VALUES ($1, $2)`, [id, projectId]);
+      }
+    }
+
     const row = res.rows[0];
     const warehouse = {
       id: row.id,
@@ -105,6 +118,7 @@ export async function POST(request: Request) {
       type: row.type,
       capacity: row.capacity,
       status: row.status,
+      projects: projectIds || [],
       createdAt: row.created_at,
       updatedAt: row.updated_at
     };
@@ -119,7 +133,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, code, name, location, coordinates, evidence, type, capacity, status } = body;
+    const { id, code, name, location, coordinates, evidence, type, capacity, status, projectIds } = body;
 
     if (!id || !code || !name) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
@@ -135,6 +149,13 @@ export async function PUT(request: Request) {
 
     if (res.rowCount === 0) {
       return NextResponse.json({ message: 'Warehouse not found' }, { status: 404 });
+    }
+
+    if (projectIds && Array.isArray(projectIds)) {
+      await pool.query(`DELETE FROM warehouse_projects WHERE warehouse_id = $1`, [id]);
+      for (const projectId of projectIds) {
+        await pool.query(`INSERT INTO warehouse_projects (warehouse_id, project_id) VALUES ($1, $2)`, [id, projectId]);
+      }
     }
 
     return NextResponse.json({ data: res.rows[0], message: 'Warehouse updated' }, { status: 200 });

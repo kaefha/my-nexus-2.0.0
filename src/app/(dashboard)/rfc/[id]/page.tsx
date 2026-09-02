@@ -1,323 +1,313 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, MapPin, Calendar, FileText, Printer, CheckCircle, XCircle, Banknote } from 'lucide-react';
-import api from '@/lib/api';
-import StatusBadge from '@/components/shared/StatusBadge';
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, CheckCircle, Package, User, Calendar, MapPin, Upload, Loader2, Save, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Separator } from '@/components/ui/separator';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { useAuth } from '@/hooks/useAuth';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 
-export default function RfcDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
+export default function RfcDetailPage() {
+  const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
+  
   const [rfc, setRfc] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
-  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
-  const [signedDocument, setSignedDocument] = useState<File | null>(null);
-  const [processing, setProcessing] = useState(false);
+  
+  // Warehouse completion state
+  const [takerName, setTakerName] = useState('');
+  const [takerDate, setTakerDate] = useState('');
+  const [evidenceUrl, setEvidenceUrl] = useState('');
+  const [isCompleting, setIsCompleting] = useState(false);
 
   useEffect(() => {
     fetchRfcDetails();
-  }, [resolvedParams.id]);
-
-  const handleApprove = async () => {
-    setProcessing(true);
-    try {
-      let signedDocumentUrl = null;
-      if (signedDocument) {
-        const uploadData = new FormData();
-        uploadData.append('file', signedDocument);
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: uploadData,
-        });
-        
-        if (uploadRes.ok) {
-          const { url } = await uploadRes.json();
-          signedDocumentUrl = url;
-        }
-      }
-
-      await api.patch(`/api/rfc/${resolvedParams.id}`, { 
-        status: 'APPROVED', 
-        signedDocument: signedDocumentUrl,
-        approverId: user?.id
-      });
-      
-      toast.success('RFC Approved successfully');
-      setIsApproveModalOpen(false);
-      fetchRfcDetails(); // Refresh details
-      window.dispatchEvent(new Event('refreshNotifications'));
-    } catch (error) {
-      console.error('Failed to approve', error);
-      toast.error('Failed to approve RFC');
-    } finally {
-      setProcessing(false);
-    }
-  };
+  }, [params.id]);
 
   const fetchRfcDetails = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get(`/api/rfc/${resolvedParams.id}`);
+      const { data } = await api.get(`/api/rfc/${params.id}`);
       setRfc(data.data);
-    } catch (error: any) {
-      toast.error('Failed to load RFC details');
-      console.error(error);
+      if (data.data?.takerName) setTakerName(data.data.takerName);
+      if (data.data?.takerDate) setTakerDate(data.data.takerDate.substring(0, 10));
+      if (data.data?.evidenceDocument) setEvidenceUrl(data.data.evidenceDocument);
+    } catch (error) {
+      console.error('Failed to fetch RFC details', error);
+      toast.error('Failed to load details');
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading details...</p>
-      </div>
-    );
-  }
+  const handleComplete = async () => {
+    if (!takerName) return toast.error('Please input the name of the person taking the materials');
+    if (!takerDate) return toast.error('Please input the pickup date');
+    // Evidence is optional depending on business logic, but let's encourage it or just make it optional.
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val || 0);
+    setIsCompleting(true);
+    try {
+      await api.patch(`/api/rfc/${rfc.id}`, {
+        status: 'COMPLETED',
+        takerName,
+        takerDate,
+        evidenceDocument: evidenceUrl || null,
+        completedBy: user?.id
+      });
+      toast.success('Materials successfully released and stock deducted!');
+      fetchRfcDetails();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to complete RFC');
+    } finally {
+      setIsCompleting(false);
+    }
   };
 
-  const grandTotal = rfc?.items?.reduce((sum: number, item: any) => sum + ((parseFloat(item.requestQty) || 0) * (parseFloat(item.unitPrice) || 0)), 0) || 0;
-
-  if (!rfc) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <FileText className="w-12 h-12 text-muted-foreground/30 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">RFC Not Found</h2>
-        <Button variant="outline" onClick={() => router.back()}>Go Back</Button>
-      </div>
-    );
+  if (loading) {
+    return <div className="flex h-[400px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
+  if (!rfc) {
+    return <div className="p-6 text-center text-muted-foreground">RFC not found.</div>;
+  }
+
+  const isApproved = rfc.status === 'APPROVED';
+  const isCompleted = rfc.status === 'COMPLETED';
+
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in">
-      <div className="flex flex-col md:flex-row md:items-center gap-4">
-        <div className="flex items-start md:items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0 mt-1 md:mt-0">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-              <span className="break-all">{rfc.rfcNumber}</span>
-              <div className="inline-block w-fit">
-                <StatusBadge status={rfc.status} />
-              </div>
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">Detailed view of Request for Consumption</p>
+    <div className="space-y-6 max-w-5xl mx-auto pb-10">
+      <div className="flex items-center gap-4">
+        <Button variant="outline" size="icon" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight">{rfc.rfcNumber}</h1>
+            <StatusBadge status={rfc.status} />
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2 md:ml-auto pl-12 md:pl-0">
-          {rfc.signedDocument && (
-            <Button variant="outline" size="sm" className="sm:size-default" onClick={() => window.open(rfc.signedDocument, '_blank')}>
-              <FileText className="w-4 h-4 mr-2" /> Signed Doc
-            </Button>
-          )}
-          <Button variant="default" size="sm" className="sm:size-default" onClick={() => window.open(`/print/rfc/${rfc.id}`, '_blank')}>
-            <Printer className="w-4 h-4 mr-2" /> Print PDF
-          </Button>
-          {rfc.status === 'WAITING_APPROVAL' && (user?.role === 'PROCUREMENT' || user?.role === 'OWNER' || user?.role === 'DIREKTUR' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
-            <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white sm:size-default" onClick={() => setIsApproveModalOpen(true)}>
-              <CheckCircle className="w-4 h-4 mr-2" /> Approve
-            </Button>
-          )}
+          <p className="text-sm text-muted-foreground">
+            Created on {new Date(rfc.createdAt).toLocaleDateString()}
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Project Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Project Name</p>
-              <p className="font-medium">{rfc.project?.projectName || '-'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Location</p>
-              <div className="flex items-center gap-1.5 font-medium">
-                <MapPin className="w-4 h-4 text-primary" /> {rfc.location || '-'}
-              </div>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Created At</p>
-              <div className="flex items-center gap-1.5 font-medium">
-                <Calendar className="w-4 h-4 text-primary" /> 
-                {rfc.createdAt ? new Date(rfc.createdAt).toLocaleString() : '-'}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Personnel</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Requestor</p>
-              <p className="font-medium">{rfc.requestor?.name || '-'}</p>
-              <p className="text-xs text-muted-foreground">{rfc.requestor?.role || '-'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Site Approver</p>
-              <p className="font-medium">{rfc.siteApproverName || '-'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Finance Approver</p>
-              <p className="font-medium">{rfc.financeApproverName || '-'}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {rfc.notes && (
-        <div className="flex flex-col items-start gap-[3.6px] rounded-[14.4px] bg-card border border-border p-4 w-full">
-          <div className="text-sm font-medium">Additional Notes</div>
-          <div className="text-sm text-foreground flex flex-col items-start self-stretch p-[10.8px] rounded-[7.2px] bg-muted/50">
-            {rfc.notes}
-          </div>
-        </div>
-      )}
-
-      {grandTotal > 0 && (
-        <div className="flex flex-col justify-center items-start w-full h-[87px] py-[14.4px] px-0 gap-[14.4px] rounded-[14.4px] border border-border bg-card">
-          <div className="w-full flex items-center justify-between px-[14.4px] sm:px-[24px]">
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-primary/10 rounded-full text-primary">
-                <Banknote className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Estimated Grand Total</p>
-                <h3 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
-                  {formatCurrency(grandTotal)}
-                </h3>
-              </div>
-            </div>
-            <div className="hidden sm:block text-right">
-              <p className="text-xs text-muted-foreground max-w-[200px]">
-                Estimated total based on master material unit prices.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <Card className="border-0 shadow-none ring-0 bg-transparent">
-        <CardHeader className="px-0">
-          <CardTitle className="text-lg flex items-center justify-between">
-            <span>Requested Items</span>
-            <span className="text-sm font-normal text-muted-foreground bg-muted px-2 py-1 rounded-full">
-              {rfc.items?.length || 0} items
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead className="pl-6">Material Code</TableHead>
-                <TableHead>Material Name</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead>Unit</TableHead>
-                <TableHead className="text-right">Est. Unit Price</TableHead>
-                <TableHead className="text-right">Est. Total</TableHead>
-                <TableHead className="pr-6">Notes</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rfc.items && rfc.items.length > 0 ? (
-                rfc.items.map((item: any) => {
-                  const qty = parseFloat(item.requestQty) || 0;
-                  const price = parseFloat(item.unitPrice) || 0;
-                  const total = qty * price;
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="pl-6 font-medium text-primary">{item.materialCode}</TableCell>
-                      <TableCell>{item.materialName}</TableCell>
-                      <TableCell className="text-right font-semibold">{item.requestQty}</TableCell>
-                      <TableCell className="text-muted-foreground">{item.unit}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">{price > 0 ? formatCurrency(price) : '-'}</TableCell>
-                      <TableCell className="text-right font-medium">{price > 0 ? formatCurrency(total) : '-'}</TableCell>
-                      <TableCell className="pr-6 text-muted-foreground text-sm max-w-[200px] truncate" title={item.notes}>
-                        {item.notes || '-'}
-                      </TableCell>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Requested Materials</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Material</TableHead>
+                    <TableHead className="text-right">Quantity</TableHead>
+                    <TableHead>Unit</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rfc.items && rfc.items.length > 0 ? (
+                    rfc.items.map((item: any) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <div className="font-medium">{item.materialName}</div>
+                          <div className="text-xs text-muted-foreground">{item.materialCode}</div>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">{item.requestQty}</TableCell>
+                        <TableCell>{item.unit}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{item.notes || '-'}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground">No items found</TableCell>
                     </TableRow>
-                  );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No items requested in this RFC
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-            {rfc.items && rfc.items.length > 0 && (
-              <TableFooter>
-                <TableRow>
-                  <TableCell colSpan={5} className="text-right pl-6 font-bold">Estimated Grand Total</TableCell>
-                  <TableCell className="text-right font-bold text-primary">
-                    {formatCurrency(
-                      rfc.items.reduce((sum: number, item: any) => sum + ((parseFloat(item.requestQty) || 0) * (parseFloat(item.unitPrice) || 0)), 0)
-                    )}
-                  </TableCell>
-                  <TableCell className="pr-6"></TableCell>
-                </TableRow>
-              </TableFooter>
-            )}
-          </Table>
-        </CardContent>
-      </Card>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
 
-      <Dialog open={isApproveModalOpen} onOpenChange={setIsApproveModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Approve RFC</DialogTitle>
-            <DialogDescription>
-              You are about to approve RFC {rfc?.rfcNumber}. If required, please upload the signed document below.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="signedDocument">Signed Document (Optional)</Label>
-              <Input 
-                id="signedDocument" 
-                type="file"
-                accept=".pdf,image/*"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files.length > 0) {
-                    setSignedDocument(e.target.files[0]);
-                  }
-                }}
-              />
-              <p className="text-xs text-muted-foreground">Upload the wet-signed version of the document.</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsApproveModalOpen(false)} disabled={processing}>
-              Cancel
-            </Button>
-            <Button onClick={handleApprove} disabled={processing} className="bg-green-600 hover:bg-green-700 text-white">
-              {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-              Confirm Approval
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {isApproved && (
+            <Card className="border-primary/50 shadow-sm">
+              <CardHeader className="bg-primary/5 border-b pb-4">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  Warehouse Release Confirmation
+                </CardTitle>
+                <CardDescription>
+                  This request is approved. Please fill out the details below before releasing the materials. This will deduct the stock from the warehouse.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="takerName">Taker Name (Nama Pengambil) <span className="text-destructive">*</span></Label>
+                    <Input 
+                      id="takerName" 
+                      placeholder="e.g. Budi (Teknisi)" 
+                      value={takerName}
+                      onChange={(e) => setTakerName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="takerDate">Pickup Date (Tanggal Ambil) <span className="text-destructive">*</span></Label>
+                    <Input 
+                      id="takerDate" 
+                      type="date"
+                      value={takerDate}
+                      onChange={(e) => setTakerDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="evidence">Evidence Document (URL / Photo Link)</Label>
+                    <div className="flex gap-2">
+                      <Input 
+                        id="evidence" 
+                        placeholder="https://..." 
+                        value={evidenceUrl}
+                        onChange={(e) => setEvidenceUrl(e.target.value)}
+                      />
+                      {/* In a real app, this would be a file upload component */}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Upload a photo of the recipient with the materials or a signed form.</p>
+                  </div>
+                </div>
+                
+                <div className="pt-4 flex justify-end">
+                  <Button onClick={handleComplete} disabled={isCompleting || !takerName || !takerDate} className="gap-2">
+                    {isCompleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Confirm Release & Deduct Stock
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {isCompleted && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  Release Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground block mb-1">Taken By</span>
+                    <span className="font-medium">{rfc.takerName || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block mb-1">Pickup Date</span>
+                    <span className="font-medium">{rfc.takerDate ? new Date(rfc.takerDate).toLocaleDateString() : '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block mb-1">Processed By (Warehouse)</span>
+                    <span className="font-medium">{rfc.completedByName || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block mb-1">Completed At</span>
+                    <span className="font-medium">{rfc.completedAt ? new Date(rfc.completedAt).toLocaleString() : '-'}</span>
+                  </div>
+                  {rfc.evidenceDocument && (
+                    <div className="col-span-2 mt-2">
+                      <span className="text-muted-foreground block mb-1">Evidence Document</span>
+                      <a href={rfc.evidenceDocument} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                        <FileText className="h-4 w-4" /> View Document
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              <div>
+                <span className="text-muted-foreground flex items-center gap-2 mb-1"><MapPin className="h-4 w-4" /> Source Warehouse</span>
+                <span className="font-medium">{rfc.warehouse?.name || '-'}</span>
+              </div>
+              <Separator />
+              <div>
+                <span className="text-muted-foreground flex items-center gap-2 mb-1"><FileText className="h-4 w-4" /> Project</span>
+                <span className="font-medium">{rfc.project?.projectName || '-'}</span>
+              </div>
+              {rfc.notes && (
+                <>
+                  <Separator />
+                  <div>
+                    <span className="text-muted-foreground flex items-center gap-2 mb-1">Notes / Purpose</span>
+                    <span>{rfc.notes}</span>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Activity Log</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="relative pl-6 border-l-2 border-muted space-y-6">
+                <div className="relative">
+                  <div className="absolute -left-[29px] bg-background p-1 rounded-full">
+                    <div className="w-3 h-3 rounded-full bg-primary" />
+                  </div>
+                  <div className="text-sm">
+                    <p className="font-medium">Requested</p>
+                    <p className="text-muted-foreground text-xs mt-0.5">{new Date(rfc.createdAt).toLocaleString()}</p>
+                    <p className="text-xs mt-1">By {rfc.requestor?.name || 'Unknown'}</p>
+                  </div>
+                </div>
+
+                {rfc.approvedAt && (
+                  <div className="relative">
+                    <div className="absolute -left-[29px] bg-background p-1 rounded-full">
+                      <div className="w-3 h-3 rounded-full bg-green-500" />
+                    </div>
+                    <div className="text-sm">
+                      <p className="font-medium">Approved</p>
+                      <p className="text-muted-foreground text-xs mt-0.5">{new Date(rfc.approvedAt).toLocaleString()}</p>
+                      <p className="text-xs mt-1">By {rfc.approver?.name || 'Unknown'}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {rfc.completedAt && (
+                  <div className="relative">
+                    <div className="absolute -left-[29px] bg-background p-1 rounded-full">
+                      <div className="w-3 h-3 rounded-full bg-blue-500" />
+                    </div>
+                    <div className="text-sm">
+                      <p className="font-medium">Completed (Materials Released)</p>
+                      <p className="text-muted-foreground text-xs mt-0.5">{new Date(rfc.completedAt).toLocaleString()}</p>
+                      <p className="text-xs mt-1">By {rfc.completedByName || 'Unknown'}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

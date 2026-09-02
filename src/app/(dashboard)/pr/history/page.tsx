@@ -37,7 +37,7 @@ export default function RfcHistoryPage() {
  const fetchRfcs = async () => {
    setLoading(true);
    try {
-     const { data } = await api.get('/api/rfc', { params: { search, status: 'HISTORY', startDate, endDate, sort, limit: 100 } });
+     const { data } = await api.get('/api/pr', { params: { search, status: 'HISTORY', startDate, endDate, sort, limit: 100 } });
      setRfcs(data.data || []);
  } catch (error) {
  console.error(error);
@@ -47,22 +47,22 @@ export default function RfcHistoryPage() {
  };
 
  const handleDeleteRfc = async (id: string) => {
-   if (!confirm('Are you sure you want to delete this RFC? This action cannot be undone.')) return;
+   if (!confirm('Are you sure you want to delete this PR? This action cannot be undone.')) return;
    try {
-     await api.delete(`/api/rfc/${id}`);
-     toast.success('RFC deleted successfully');
+     await api.delete(`/api/pr/${id}`);
+     toast.success('PR deleted successfully');
      fetchRfcs();
    } catch (error) {
-     console.error('Failed to delete RFC:', error);
-     toast.error('Failed to delete RFC');
+     console.error('Failed to delete PR:', error);
+     toast.error('Failed to delete PR');
    }
  };
 
  return (
  <div className="space-y-6">
  <div className="animate-fade-in">
-        <h1 className="text-3xl font-bold tracking-tight">RFC History</h1>
- <p className="text-sm text-muted-foreground mt-1">View approved and rejected Request for Consumption (RFC) records</p>
+        <h1 className="text-3xl font-bold tracking-tight">Purchase Log</h1>
+ <p className="text-sm text-muted-foreground mt-1">View approved and rejected Purchase Request (PR) records</p>
       </div>
 
       <div className="flex flex-col gap-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
@@ -71,7 +71,7 @@ export default function RfcHistoryPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search RFC history..."
+              placeholder="Search PR history..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 h-9"
@@ -112,14 +112,14 @@ export default function RfcHistoryPage() {
  {loading ? (
  <div className="p-8 text-center flex flex-col items-center bg-card border rounded-xl ">
  <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
- <p className="text-muted-foreground">Loading RFC history...</p>
+ <p className="text-muted-foreground">Loading PR history...</p>
  </div>
  ) : rfcs.length > 0 ? (
  <>
  <Table className="whitespace-nowrap">
  <TableHeader>
  <TableRow>
- <TableHead className="w-[140px]">RFC Number</TableHead>
+ <TableHead className="w-[140px]">PR Number</TableHead>
  <TableHead className="w-[250px]">Project</TableHead>
  <TableHead className="w-[200px]">Location</TableHead>
  <TableHead className="w-[150px]">Requestor</TableHead>
@@ -173,7 +173,7 @@ export default function RfcHistoryPage() {
          <FileText className="w-3.5 h-3.5" /> Signed Doc
        </a>
      ) : (
-       <Link href={`/print/rfc/${rfc.id}`} target="_blank" className="text-gray-600 hover:text-black hover:underline flex items-center gap-1 border border-gray-300 rounded px-2 py-0.5" title="Print Request PDF">
+       <Link href={`/print/pr/${rfc.id}`} target="_blank" className="text-gray-600 hover:text-black hover:underline flex items-center gap-1 border border-gray-300 rounded px-2 py-0.5" title="Print Request PDF">
          <Printer className="w-3 h-3" /> Print PDF
        </Link>
      )}
@@ -181,7 +181,7 @@ export default function RfcHistoryPage() {
        <button
          onClick={() => handleDeleteRfc(rfc.id)}
          className="text-destructive hover:bg-destructive/10 rounded p-1 transition-colors ml-1"
-         title="Delete RFC"
+         title="Delete PR"
        >
          <Trash2 className="w-4 h-4" />
        </button>
@@ -207,7 +207,7 @@ export default function RfcHistoryPage() {
  ) : (
  <div className="text-center py-16 bg-card border rounded-xl ">
  <History className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
- <p className="text-muted-foreground">No RFC history found</p>
+ <p className="text-muted-foreground">No PR history found</p>
  </div>
  )}
  </div>
