@@ -126,7 +126,7 @@ export default function WarehousePage() {
 
   const openCreateDialog = () => {
     setEditId(null);
-    setFormData({ code: '', name: '', location: '', coordinates: '', evidence: '', type: 'MAIN', capacity: '', status: 'ACTIVE', projectIds: [] });
+    setFormData({ code: '', name: '', location: '', coordinates: '', evidence: '', type: 'MAIN', capacity: '', status: 'ACTIVE', picName: '', projectIds: [] });
     setProjectSearch('');
     setIsOpen(true);
   };

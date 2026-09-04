@@ -149,7 +149,7 @@ export function ManualStockEntryModal({ isOpen, onClose, warehouseId, onSuccess 
         <div className="flex items-end gap-3 mt-4">
           <div className="flex-1 grid gap-2">
             <Label htmlFor="material-select">Cari & Pilih Material</Label>
-            <Select value={selectedMaterialId} onValueChange={setSelectedMaterialId} disabled={loadingMaterials}>
+            <Select value={selectedMaterialId} onValueChange={(val) => setSelectedMaterialId(val || '')} disabled={loadingMaterials}>
               <SelectTrigger id="material-select">
                 <SelectValue placeholder={loadingMaterials ? "Memuat..." : "Pilih material dari master data..."}>
                   {selectedMaterialId && materials.find(m => m.id === selectedMaterialId) 
