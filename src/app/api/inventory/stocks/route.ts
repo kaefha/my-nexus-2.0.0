@@ -12,6 +12,7 @@ export async function GET(request: Request) {
     let queryStr = `
       SELECT 
         MAX(s.id::text) as id, 
+        m.id as "materialId",
         SUM(s.quantity) as quantity, 
         MAX(s.last_updated) as "lastUpdated",
         w.name as "warehouseName",
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
       paramIndex++;
     }
 
-    queryStr += ' GROUP BY w.name, w.code, m.material_code, m.material_name, m.category, m.unit, m.unit_price';
+    queryStr += ' GROUP BY m.id, w.name, w.code, m.material_code, m.material_name, m.category, m.unit, m.unit_price';
     queryStr += ' ORDER BY w.name ASC, m.material_name ASC';
 
     const res = await pool.query(queryStr, queryParams);

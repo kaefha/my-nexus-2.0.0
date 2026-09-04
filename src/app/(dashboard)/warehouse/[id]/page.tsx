@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { DataTablePagination } from '@/components/shared/DataTablePagination';
 
+import { MaterialLogModal } from '@/components/warehouse/MaterialLogModal';
+
 export default function WarehouseDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -23,6 +25,9 @@ export default function WarehouseDetailsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  
+  const [selectedLogMaterial, setSelectedLogMaterial] = useState<any>(null);
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -147,8 +152,8 @@ export default function WarehouseDetailsPage() {
       </Card>
 
       {/* Materials List */}
-      <Card>
-        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+      <Card className="border-none shadow-none bg-transparent sm:bg-card ring-0">
+        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 px-0">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Package className="w-5 h-5 text-primary" /> Stored Materials
@@ -163,7 +168,7 @@ export default function WarehouseDetailsPage() {
             className="w-full sm:w-[250px]"
           />
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0">
           {filteredMaterials.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No materials found in this warehouse.
@@ -181,7 +186,14 @@ export default function WarehouseDetailsPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredMaterials.slice((page - 1) * pageSize, page * pageSize).map((mat: any, i: number) => (
-                    <TableRow key={i}>
+                    <TableRow 
+                      key={i} 
+                      className="cursor-pointer hover:bg-muted/60"
+                      onClick={() => {
+                        setSelectedLogMaterial(mat);
+                        setIsLogModalOpen(true);
+                      }}
+                    >
                       <TableCell className="font-medium text-primary">{mat.materialCode}</TableCell>
                       <TableCell>{mat.materialName}</TableCell>
                       <TableCell>
@@ -205,6 +217,17 @@ export default function WarehouseDetailsPage() {
           )}
         </CardContent>
       </Card>
+
+      {selectedLogMaterial && (
+        <MaterialLogModal
+          isOpen={isLogModalOpen}
+          onClose={() => setIsLogModalOpen(false)}
+          warehouseId={id as string}
+          materialId={selectedLogMaterial.materialId}
+          materialCode={selectedLogMaterial.materialCode}
+          materialName={selectedLogMaterial.materialName}
+        />
+      )}
     </div>
   );
 }

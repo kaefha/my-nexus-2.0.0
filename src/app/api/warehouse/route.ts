@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       queryStr += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    queryStr += ` GROUP BY w.id, w.code, w.name, w.location, w.coordinates, w.evidence, w.type, w.capacity, w.status, w.created_at, w.updated_at`;
+    queryStr += ` GROUP BY w.id, w.code, w.name, w.location, w.coordinates, w.evidence, w.type, w.capacity, w.status, w.pic_name, w.created_at, w.updated_at`;
 
     if (sort === 'name-desc') {
       queryStr += ' ORDER BY w.name DESC';
@@ -70,6 +70,7 @@ export async function GET(request: Request) {
       type: row.type,
       capacity: row.capacity,
       status: row.status,
+      picName: row.pic_name,
       totalMaterials: parseInt(row.total_materials, 10) || 0,
       totalStock: parseInt(row.total_stock, 10) || 0,
       projects: row.projects || [],
@@ -87,7 +88,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { code, name, location, coordinates, evidence, type, capacity, projectIds } = body;
+    const { code, name, location, coordinates, evidence, type, capacity, picName, projectIds } = body;
 
     if (!code || !name) {
       return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
@@ -96,10 +97,10 @@ export async function POST(request: Request) {
     const id = generateId();
 
     const res = await pool.query(`
-      INSERT INTO warehouses (id, code, name, location, coordinates, evidence, type, capacity, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO warehouses (id, code, name, location, coordinates, evidence, type, capacity, status, pic_name)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
-    `, [id, code, name, location || '', coordinates || '', evidence || null, type || 'MAIN', capacity || '', 'ACTIVE']);
+    `, [id, code, name, location || '', coordinates || '', evidence || null, type || 'MAIN', capacity || '', 'ACTIVE', picName || null]);
 
     if (projectIds && Array.isArray(projectIds) && projectIds.length > 0) {
       for (const projectId of projectIds) {
@@ -118,6 +119,7 @@ export async function POST(request: Request) {
       type: row.type,
       capacity: row.capacity,
       status: row.status,
+      picName: row.pic_name,
       projects: projectIds || [],
       createdAt: row.created_at,
       updatedAt: row.updated_at

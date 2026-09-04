@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { 
-  Warehouse as WarehouseIcon, Search, Box, ArrowRight, Package, Layers
+  Warehouse as WarehouseIcon, Search, Box, ArrowRight, Package, Layers, User, ChevronRight, Home
 } from 'lucide-react';
 import api from '@/lib/api';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ interface WarehouseData {
   status: string;
   totalStock: number;
   totalMaterials: number;
+  picName?: string;
 }
 
 export default function OwnerWarehouseListPage() {
@@ -46,6 +47,14 @@ export default function OwnerWarehouseListPage() {
 
   return (
     <div className="space-y-6 pb-10 animate-fade-in">
+      <nav className="flex items-center space-x-1 text-sm text-muted-foreground">
+        <Link href="/owner-dashboard" className="hover:text-foreground transition-colors flex items-center gap-1">
+          <Home className="w-4 h-4" />
+        </Link>
+        <ChevronRight className="w-4 h-4" />
+        <span className="font-medium text-foreground">Daftar Gudang</span>
+      </nav>
+      
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Daftar Gudang</h1>
@@ -72,7 +81,7 @@ export default function OwnerWarehouseListPage() {
         <div className="flex flex-col gap-3">
           {filteredWarehouses.map((w) => (
             <Link href={`/owner-dashboard/warehouse/${w.id}`} key={w.id} className="block group">
-              <div className="bg-white rounded-[14.4px] px-5 py-3.5 flex flex-row items-center gap-10 shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.1),0px_1px_3px_0px_rgba(0,0,0,0.1),0px_0px_0px_1px_rgba(229,229,229,0.5)] overflow-hidden transition-all duration-300 hover:shadow-md hover:ring-1 hover:ring-primary/40 relative">
+              <div className="bg-white border border-gray-200 rounded-[14.4px] px-5 py-3.5 flex flex-row items-center gap-10 overflow-hidden transition-all duration-300 hover:border-gray-300 relative">
                 
                 {/* Left Column (Info) */}
                 <div className="flex flex-col flex-1 min-w-[200px]">
@@ -86,7 +95,7 @@ export default function OwnerWarehouseListPage() {
                 </div>
 
                 {/* Center Columns (Stats) */}
-                <div className="flex items-center gap-7 shrink-0">
+                <div className="max-[400px]:hidden flex items-center gap-7 shrink-0">
                   <div className="flex items-center gap-[7.2px]">
                     <div className="bg-blue-500/10 rounded-[7.2px] p-[5.4px]">
                       <Package className="w-[14.4px] h-[14.4px] text-blue-500" />
@@ -104,6 +113,16 @@ export default function OwnerWarehouseListPage() {
                     <div className="flex flex-col w-[79.27px]">
                       <span className="text-[10px] font-medium text-[#737373] uppercase tracking-[0.5px] leading-[14.29px]">SKU Material</span>
                       <span className="text-[12.6px] font-semibold text-[#0a0a0a] leading-[18px]">{w.totalMaterials?.toLocaleString() || 0}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-[7.2px] hidden sm:flex">
+                    <div className="bg-purple-500/10 rounded-[7.2px] p-[5.4px]">
+                      <User className="w-[14.4px] h-[14.4px] text-purple-500" />
+                    </div>
+                    <div className="flex flex-col w-[79.27px]">
+                      <span className="text-[10px] font-medium text-[#737373] uppercase tracking-[0.5px] leading-[14.29px]">PIC Gudang</span>
+                      <span className="text-[12.6px] font-semibold text-[#0a0a0a] leading-[18px] truncate" title={w.picName || '-'}>{w.picName || '-'}</span>
                     </div>
                   </div>
                 </div>

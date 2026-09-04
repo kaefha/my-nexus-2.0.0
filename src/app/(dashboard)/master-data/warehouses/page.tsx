@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Warehouse, Search, Plus, Loader2, Pencil, Trash2, MapPin, Upload, Image as ImageIcon, X, ExternalLink, Map, Globe, Check, ChevronsUpDown, MoreHorizontal, Eye } from 'lucide-react';
+import { Warehouse, Search, Plus, Loader2, Pencil, Trash2, MapPin, Upload, Image as ImageIcon, X, ExternalLink, Map, Globe, Check, ChevronsUpDown, MoreHorizontal, Eye, PackagePlus } from 'lucide-react';
 import api from '@/lib/api';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,8 +17,11 @@ import { ExcelImportExport } from '@/components/ExcelImportExport';
 import { toast } from 'sonner';
 import { DataTablePagination } from '@/components/shared/DataTablePagination';
 import { Badge } from '@/components/ui/badge';
+import { ManualStockEntryModal } from '@/components/warehouse/ManualStockEntryModal';
+import { useRouter } from 'next/navigation';
 
 export default function WarehousePage() {
+  const router = useRouter();
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [projectsList, setProjectsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,12 +49,12 @@ export default function WarehousePage() {
   // Preview state
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   
-  // Details state
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [detailsData, setDetailsData] = useState<any>(null);
-  
   // Project Search State
   const [projectSearch, setProjectSearch] = useState('');
+
+  // Manual Stock Entry State
+  const [stockEntryOpen, setStockEntryOpen] = useState(false);
+  const [stockEntryWarehouseId, setStockEntryWarehouseId] = useState('');
 
   const [formData, setFormData] = useState({
     code: '',
@@ -62,6 +65,7 @@ export default function WarehousePage() {
     type: 'MAIN',
     capacity: '',
     status: 'ACTIVE',
+    picName: '',
     projectIds: [] as string[]
   });
 
@@ -138,15 +142,16 @@ export default function WarehousePage() {
       type: w.type || 'MAIN',
       capacity: w.capacity ? w.capacity.toString() : '',
       status: w.status || 'ACTIVE',
+      picName: w.picName || '',
       projectIds: w.projects ? w.projects.map((p: any) => p.id) : []
     });
     setProjectSearch('');
     setIsOpen(true);
   };
 
-  const openDetailsDialog = (w: any) => {
-    setDetailsData(w);
-    setDetailsOpen(true);
+  const openStockEntryDialog = (w: any) => {
+    setStockEntryWarehouseId(w.id);
+    setStockEntryOpen(true);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -416,7 +421,8 @@ export default function WarehousePage() {
                     />
                   </TableHead>
                   <TableHead className="w-[150px]">Code</TableHead>
-                  <TableHead className="w-[350px]">Name</TableHead>
+                  <TableHead className="w-[250px]">Name</TableHead>
+                  <TableHead className="w-[150px]">PIC</TableHead>
                   <TableHead className="w-[120px]">Status</TableHead>
                   <TableHead className="w-[80px] text-right">Action</TableHead>
                 </TableRow>
@@ -439,14 +445,22 @@ export default function WarehousePage() {
                       <TableCell className="font-medium text-primary w-[150px] whitespace-normal break-words">
                         {w.code}
                       </TableCell>
-                      <TableCell className="font-medium whitespace-normal max-w-[350px]">
-                        <span 
-                          className="line-clamp-2 block leading-snug break-words"
-                          style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
-                          title={w.name}
-                        >
-                          {w.name}
-                        </span>
+                      <TableCell>
+                        <div className="font-medium whitespace-normal max-w-[250px]">
+                          <span 
+                            className="line-clamp-2 block leading-snug break-words"
+                            style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                            title={w.name}
+                          >
+                            {w.name}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate max-w-[250px] mt-1" title={w.location}>
+                          {w.location}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm font-medium">{w.picName || '-'}</div>
                       </TableCell>
                       <TableCell><StatusBadge status={w.status} /></TableCell>
                       <TableCell className="text-right">
@@ -455,14 +469,18 @@ export default function WarehousePage() {
                             <span className="sr-only">Open menu</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openDetailsDialog(w)} className="cursor-pointer">
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuItem onClick={() => router.push(`/warehouse/${w.id}`)} className="cursor-pointer">
                               <Eye className="mr-2 h-4 w-4" />
                               <span>Lihat Detil</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => openEditDialog(w)} className="cursor-pointer">
                               <Pencil className="mr-2 h-4 w-4" />
                               <span>Edit</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openStockEntryDialog(w)} className="cursor-pointer">
+                              <PackagePlus className="mr-2 h-4 w-4" />
+                              <span>Tambah Stok Manual</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => { setDeleteId(w.id); setDeleteOpen(true); }} className="cursor-pointer text-destructive focus:text-destructive">
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -569,6 +587,18 @@ export default function WarehousePage() {
                     placeholder="e.g. 5000" 
                     value={formData.capacity}
                     onChange={(e) => setFormData({...formData, capacity: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="picName">PIC (Person In Charge)</Label>
+                  <Input 
+                    id="picName" 
+                    placeholder="e.g. John Doe" 
+                    value={formData.picName}
+                    onChange={(e) => setFormData({...formData, picName: e.target.value})}
                   />
                 </div>
               </div>
@@ -780,72 +810,16 @@ export default function WarehousePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Details Dialog */}
-      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Warehouse Details</DialogTitle>
-          </DialogHeader>
-          {detailsData && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-              <div className="flex flex-col gap-4">
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Warehouse Code</h4>
-                  <p className="text-sm font-medium">{detailsData.code}</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Warehouse Name</h4>
-                  <p className="text-sm font-medium">{detailsData.name}</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Location</h4>
-                  <p className="text-sm">{detailsData.location || '-'}</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Coordinates</h4>
-                  <p className="text-sm">{detailsData.coordinates || '-'}</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Type & Capacity</h4>
-                  <p className="text-sm">{detailsData.type || '-'} • {detailsData.capacity ? `${detailsData.capacity} CBM` : '-'}</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Status</h4>
-                  <StatusBadge status={detailsData.status} />
-                </div>
-              </div>
-              
-              <div className="flex flex-col gap-4">
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Evidence Photo</h4>
-                  {detailsData.evidence ? (
-                    <img src={detailsData.evidence} alt="Evidence" className="w-full h-auto max-h-[200px] object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity" onClick={() => setPreviewImage(detailsData.evidence)} />
-                  ) : (
-                    <div className="text-sm text-muted-foreground italic border border-dashed rounded-md p-4 text-center">No photo available</div>
-                  )}
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Assigned Projects</h4>
-                  {detailsData.projects && detailsData.projects.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {detailsData.projects.map((p: any) => (
-                        <Badge key={p.id} variant="secondary">
-                          {p.code || p.projectCode}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground italic">No assigned projects</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDetailsOpen(false)}>Tutup</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+
+      <ManualStockEntryModal 
+        isOpen={stockEntryOpen}
+        onClose={() => setStockEntryOpen(false)}
+        warehouseId={stockEntryWarehouseId}
+        onSuccess={() => {
+          fetchWarehouses();
+        }}
+      />
     </div>
   );
 }

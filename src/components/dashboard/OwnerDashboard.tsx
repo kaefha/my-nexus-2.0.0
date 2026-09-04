@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { GlobalMaterialDistributionModal } from './GlobalMaterialDistributionModal';
 
 interface OwnerData {
   totalWarehouses: number;
@@ -25,6 +26,7 @@ interface OwnerData {
 export default function OwnerDashboard() {
   const [data, setData] = useState<OwnerData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchOwnerDashboard = async () => {
@@ -71,6 +73,7 @@ export default function OwnerDashboard() {
       title: 'Total Jenis Material (SKU)',
       value: data.totalMaterialTypes.toLocaleString(),
       icon: Layers,
+      onClick: () => setIsMaterialModalOpen(true)
     },
   ] : [];
 
@@ -88,21 +91,31 @@ export default function OwnerDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {kpiCards.map((card, index) => {
           const Icon = card.icon;
+          const isClickable = !!card.onClick;
           const CardInner = (
-            <Card className={cn("animate-fade-in transition-all hover:shadow-md h-full", card.isPrimary && "border-primary/40 bg-primary/5")} style={{ animationDelay: `${index * 80}ms` }}>
+            <Card 
+              className={cn("animate-fade-in transition-all hover:shadow-md h-full", card.isPrimary && "border-primary/40 bg-primary/5", isClickable && "cursor-pointer")} 
+              style={{ animationDelay: `${index * 80}ms` }}
+              onClick={card.onClick}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className={cn("text-sm font-medium", card.isPrimary ? "text-primary font-semibold" : "text-muted-foreground")}>
+                <CardTitle className={cn("text-lg font-medium", card.isPrimary ? "text-primary font-bold" : "text-foreground font-semibold")}>
                   {card.title}
                 </CardTitle>
-                <div className={cn("w-8 h-8 rounded-md flex items-center justify-center", card.isPrimary ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary")}>
-                  <Icon className="w-4 h-4" />
+                <div className={cn("w-10 h-10 rounded-md flex items-center justify-center shrink-0", card.isPrimary ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary")}>
+                  <Icon className="w-5 h-5" />
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className={cn("font-bold tracking-tight", card.isPrimary ? "text-2xl text-primary" : "text-2xl")}>{card.value}</div>
+              <CardContent className="pt-4">
+                <div className={cn("font-bold tracking-tight", card.isPrimary ? "text-4xl text-primary" : "text-4xl text-foreground")}>{card.value}</div>
                 {card.href && (
                   <div className="flex items-center gap-1 mt-2 text-xs text-primary font-medium group cursor-pointer hover:underline">
                     Lihat List Gudang <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                )}
+                {!card.href && isClickable && (
+                  <div className="flex items-center gap-1 mt-2 text-xs text-primary font-medium group cursor-pointer hover:underline">
+                    Lihat Detil Material <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                   </div>
                 )}
               </CardContent>
@@ -196,6 +209,11 @@ export default function OwnerDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <GlobalMaterialDistributionModal 
+        isOpen={isMaterialModalOpen} 
+        onClose={() => setIsMaterialModalOpen(false)} 
+      />
     </div>
   );
 }
